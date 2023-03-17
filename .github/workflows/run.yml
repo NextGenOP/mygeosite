@@ -57,6 +57,8 @@ jobs:
           echo "RULE_IPCHECK=https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_ipcheck.txt" >> $GITHUB_ENV
           echo "RULE_VIDCONFERENCE=https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule-videoconference.txt" >> $GITHUB_ENV
           echo "MALICIOUS_HOST=https://raw.githubusercontent.com/elliotwutingfeng/Inversion-DNSBL-Blocklists/main/Google_hostnames_light.txt" >> $GITHUB_ENV
+          echo "HAGEZI_NORMAL=https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt" >> $GITHUB_ENV
+
         shell: bash
 
       - name: Checkout the "hidden" branch of this repo
@@ -215,6 +217,8 @@ jobs:
           wget -O rule-malicious.txt $MALICIOUS_HOST
           wget -O ./community/data/hblock $HBLOCK
           wget -O hblock.txt $HBLOCK
+          wget -O ./community/data/hagezi-normal $HAGEZI_NORMAL
+          wget -O hagezi-normal.txt $HAGEZI_NORMAL
           wget -O ./community/data/abpid $ABPID
           wget -O abpid.txt $ABPID
           wget -O ./community/data/abpid-adult $ABPID_ADULT
@@ -237,6 +241,8 @@ jobs:
           cat abpid.txt >> temp-adblock.txt
           cat rule-ads.txt >> temp-adblock.txt
           cat rule-malicious.txt >> temp-adblock.txt
+          cat hagezi-normal.txt >> temp-adblock.txt
+
           sort --ignore-case -u ./community/data/temp-adult > ./community/data/adult
           sort --ignore-case -u temp-adult.txt > adult.txt
           sort --ignore-case -u temp-prevent-bypass.txt > prevent-bypass.txt
@@ -255,8 +261,8 @@ jobs:
           install -Dp ./custom/publish/geosite.dat ./publish/geosite.dat
           install -p {proxy,direct}-tld-list.txt ./publish/
           install -p {proxy,direct,reject}-list.txt ./publish/
-          install -p {adblock,prevent-bypass,tiuxo-nsfw,mx-nsfw,sinfonietta-nsfw,adult,apple-cn,google-cn,gfw,greatfire,win-spy,win-update,win-extra,hblock,abpid,abpid-adult,energized-blu,steven-black,oisd-full,oisd-nsfw,rule-ads,rule-gaming,rule-indo,rule-playstore,rule-sosmed,rule-streaming,rule-malicious,rule-umum,rule-ipcheck,videoconference,rule-doh}.txt ./publish/
-          cd ./publish || exit 1
+          install -p {adblock,prevent-bypass,tiuxo-nsfw,mx-nsfw,sinfonietta-nsfw,adult,apple-cn,google-cn,gfw,greatfire,win-spy,win-update,win-extra,hblock,abpid,abpid-adult,energized-blu,hagezi-normal,steven-black,oisd-full,oisd-nsfw,rule-ads,rule-gaming,rule-indo,rule-playstore,rule-sosmed,rule-streaming,rule-malicious,rule-umum,rule-ipcheck,videoconference,rule-doh}.txt ./publish/
+          cd publish || exit 1
           zip rules.zip {proxy,direct,reject}-list.txt geoip.dat geosite.dat
           sha256sum geoip.dat > geoip.dat.sha256sum
           sha256sum geosite.dat > geosite.dat.sha256sum
