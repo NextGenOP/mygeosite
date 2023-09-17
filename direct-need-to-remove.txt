@@ -7,6 +7,8 @@ baidu.jp
 bussou.com
 busytrade.com
 cnpolitics.org
+cnbeta.com
+cnbetacdn.com
 dm530.net
 duanzhihu.com
 dysfz.cc
