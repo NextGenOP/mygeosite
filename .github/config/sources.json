@@ -184,7 +184,7 @@
         },
         {
           "name": "rule-ads",
-          "url": "https://raw.githubusercontent.com/NextGenOP/mygeosite/rule/rule-ads.txt",
+          "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule-ads.txt",
           "format": "v2ray-rules",
           "output": "rule-ads.txt"
         },
@@ -250,34 +250,5 @@
         }
       ]
     }
-  },
-  "repositories": {
-    "domain-list-custom": {
-      "owner": "Loyalsoldier",
-      "repo": "domain-list-custom",
-      "ref": "release"
-    },
-    "domain-list-community": {
-      "owner": "v2fly",
-      "repo": "domain-list-community",
-      "ref": "master"
-    },
-    "gfwlist2dnsmasq": {
-      "owner": "cokebar",
-      "repo": "gfwlist2dnsmasq",
-      "ref": "master"
-    }
-  },
-  "output_files": {
-    "direct": ["cn", "direct-list.txt", "direct-tld-list.txt"],
-    "proxy": ["geolocation-!cn", "proxy-list.txt", "proxy-tld-list.txt"],
-    "reject": ["category-ads-all", "reject-list.txt"],
-    "google-cn": ["google-cn"],
-    "apple-cn": ["apple-cn"],
-    "gfw": ["gfw"],
-    "greatfire": ["greatfire"],
-    "adult": ["adult"],
-    "adblock": ["adblock"],
-    "prevent-bypass": ["prevent-bypass"]
   }
 }

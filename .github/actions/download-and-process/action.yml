@@ -47,88 +47,67 @@ runs:
         source "${{ github.workspace }}/.github/scripts/common.sh"
         OUTPUT_DIR="${{ inputs.work-dir }}"
         CONFIG_DIR="${{ inputs.config-dir }}"
-        
+
         cd "$OUTPUT_DIR"
 
-        # Download direct domain sources
-        curl_download "$(jq -r '.sources.direct.items[] | select(.name == "dnsmasq-china-accelerated") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-dnsmasq-china-accelerated.txt"
-        curl_download "$(jq -r '.sources.direct.items[] | select(.name == "custom-direct") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-custom-direct.txt"
+        # Download all sources dynamically from JSON config
+        # Group by category to process them together
 
-         # Download proxy domain sources
-         if [ -d "gfwlist2dnsmasq" ]; then
-           setup_gfwlist "gfwlist2dnsmasq" "temp-gfwlist.txt"
-         else
-           echo "Warning: gfwlist2dnsmasq directory not found" >&2
-         fi
-         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "greatfire-domains") | .url' "${CONFIG_DIR}/sources.json")" \
-           "temp-greatfire.txt"
-         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "google-china") | .url' "${CONFIG_DIR}/sources.json")" \
-           "temp-google-china.txt"
-         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "apple-china") | .url' "${CONFIG_DIR}/sources.json")" \
-           "temp-apple-china.txt"
-         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "custom-proxy") | .url' "${CONFIG_DIR}/sources.json")" \
-           "temp-custom-proxy.txt"
-         
-         # Preserve original files for special list creation in build phase
-         cp temp-google-china.txt temp-google-china-original.txt 2>/dev/null || true
-         cp temp-apple-china.txt temp-apple-china-original.txt 2>/dev/null || true
-         cp temp-gfwlist.txt temp-gfwlist-original.txt 2>/dev/null || true
-         cp temp-greatfire.txt temp-greatfire-original.txt 2>/dev/null || true
+        # Process direct sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+          format=$(echo "$line" | jq -r '.format')
 
-        # Download reject domain sources
-        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "easylist") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-easylist.txt"
-        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "easylistchina-easylist") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-easylistchina.txt"
-        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "peterlowe") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-peterlowe.txt"
-        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "adguard-dns") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-adguard-dns.txt"
-        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "danpollock") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-danpollock.txt"
+          case "$format" in
+            "gfwlist")
+              # Special handling for gfwlist since it requires local setup
+              if [ -d "gfwlist2dnsmasq" ]; then
+                setup_gfwlist "gfwlist2dnsmasq" "$output"
+              else
+                echo "Warning: gfwlist2dnsmasq directory not found for $name" >&2
+              fi
+              ;;
+            *)
+              curl_download "$url" "temp-$name.txt"
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${CONFIG_DIR}/sources.json")
 
-        # Download additional sources
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "hblock") | .url' "${CONFIG_DIR}/sources.json")" \
-          "hblock.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-spy") | .url' "${CONFIG_DIR}/sources.json")" \
-          "win-spy.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-update") | .url' "${CONFIG_DIR}/sources.json")" \
-          "win-update.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-extra") | .url' "${CONFIG_DIR}/sources.json")" \
-          "win-extra.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "oisd-full") | .url' "${CONFIG_DIR}/sources.json")" \
-          "oisd-full.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "steven-black") | .url' "${CONFIG_DIR}/sources.json")" \
-          "steven-black.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "energized-blu") | .url' "${CONFIG_DIR}/sources.json")" \
-          "energized-blu.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "oisd-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
-          "oisd-nsfw.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "tiuxo-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
-          "tiuxo-nsfw.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "mx-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
-          "mx-nsfw.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "sinfonietta-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
-          "sinfonietta-nsfw.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "abpid") | .url' "${CONFIG_DIR}/sources.json")" \
-          "abpid.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "abpid-adult") | .url' "${CONFIG_DIR}/sources.json")" \
-          "abpid-adult.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "doh-dns") | .url' "${CONFIG_DIR}/sources.json")" \
-          "doh.txt"
-        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "prevent-bypass") | .url' "${CONFIG_DIR}/sources.json")" \
-          "prevent-bypass.txt"
+        # Process proxy sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
 
-        # Download rule files
-        for name in rule-ads rule-gaming rule-indo rule-playstore rule-sosmed rule-streaming rule-umum rule-ipcheck rule-videoconference malicious-host hagezi-normal; do
-          url=$(jq -r ".sources.additional.items[] | select(.name == \"$name\") | .url" "${CONFIG_DIR}/sources.json")
-          output=$(jq -r ".sources.additional.items[] | select(.name == \"$name\") | .output" "${CONFIG_DIR}/sources.json")
-          if [ -n "$url" ] && [ -n "$output" ]; then
-            wget_download "$url" "$output"
-          fi
-        done
+          curl_download "$url" "temp-$name.txt"
+        done < <(jq -c '.sources.proxy.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Process reject sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+
+          curl_download "$url" "temp-$name.txt"
+        done < <(jq -c '.sources.reject.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Process additional sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+
+          # For additional sources, use curl_download to match behavior with other sources
+          curl_download "$url" "$output"
+        done < <(jq -c '.sources.additional.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Preserve original files for special list creation in build phase
+        [ -f "temp-google-china.txt" ] && cp temp-google-china.txt temp-google-china-original.txt 2>/dev/null || true
+        [ -f "temp-apple-china.txt" ] && cp temp-apple-china.txt temp-apple-china-original.txt 2>/dev/null || true
+        [ -f "temp-gfwlist.txt" ] && cp temp-gfwlist.txt temp-gfwlist-original.txt 2>/dev/null || true
+        [ -f "temp-greatfire.txt" ] && cp temp-greatfire.txt temp-greatfire-original.txt 2>/dev/null || true
 
     - id: process-domains
       name: Process and extract domains
@@ -139,31 +118,129 @@ runs:
         WORK_DIR="${{ inputs.work-dir }}"
         cd "$WORK_DIR"
 
-        # Process direct domains
-        extract_dnsmasq_domains "temp-dnsmasq-china-accelerated.txt" "temp-direct.txt"
-        extract_domain_list_custom "temp-custom-direct.txt" "temp-direct.txt" "false"
+        # Process all direct sources into their respective output files
+        declare -A direct_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
 
-        # Process proxy domains
-        if [ -f "temp-gfwlist.txt" ]; then
-          filter_valid_fqdn "temp-gfwlist.txt" "temp-proxy.txt"
-        fi
-        if [ -f "temp-greatfire.txt" ]; then
-          extract_plain_domains "temp-greatfire.txt" "temp-proxy.txt"
-        fi
-        extract_dnsmasq_domains "temp-google-china.txt" "temp-proxy.txt"
-        extract_dnsmasq_domains "temp-apple-china.txt" "temp-proxy.txt"
-        extract_domain_list_custom "temp-custom-proxy.txt" "temp-proxy.txt" "true"
+          # Check if we already processed this output file
+          if [[ -z "${direct_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            direct_processed_outputs["$output"]=1
+          fi
 
-        # Process reject domains
-        extract_easylist_domains "temp-easylistchina.txt" "temp-reject.txt"
-        cat "temp-easylist.txt" >> "temp-reject.txt"
-        extract_adguard_domains "temp-adguard-dns.txt" "temp-reject.txt"
-        perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})$/ && print "$1\n"' "temp-peterlowe.txt" >> "temp-reject.txt"
-        perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})/ && print "$1\n"' "temp-danpollock.txt" | sed '1d' >> "temp-reject.txt"
+          case "$format" in
+            "dnsmasq")
+              extract_dnsmasq_domains "temp-$name.txt" "$output"
+              ;;
+            "domain-list-custom")
+              extract_domain_list_custom "temp-$name.txt" "$output" "false"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
 
-        # Extract reserved rules
-        extract_domain_list_custom_reserved "temp-custom-direct.txt" "direct-reserve.txt" "false"
-        extract_domain_list_custom_reserved "temp-custom-proxy.txt" "proxy-reserve.txt" "true"
+        # Process all proxy sources into their respective output files
+        declare -A proxy_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
+
+          # Check if we already processed this output file
+          if [[ -z "${proxy_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            proxy_processed_outputs["$output"]=1
+          fi
+
+          case "$format" in
+            "dnsmasq")
+              extract_dnsmasq_domains "temp-$name.txt" "$output"
+              ;;
+            "domain-list-custom")
+              extract_domain_list_custom "temp-$name.txt" "$output" "true"
+              ;;
+            "plain")
+              extract_plain_domains "temp-$name.txt" "$output"
+              ;;
+            "gfwlist")
+              filter_valid_fqdn "temp-$name.txt" "$output"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        # Process all reject sources into their respective output files
+        declare -A reject_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
+
+          # Check if we already processed this output file
+          if [[ -z "${reject_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            reject_processed_outputs["$output"]=1
+          fi
+
+          case "$format" in
+            "easylist")
+              extract_easylist_domains "temp-$name.txt" "$output"
+              ;;
+            "adguard")
+              extract_adguard_domains "temp-$name.txt" "$output"
+              ;;
+            "hosts")
+              extract_hosts_domains_127 "temp-$name.txt" "$output"
+              ;;
+            "plain")
+              extract_plain_domains "temp-$name.txt" "$output"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.reject.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        # Extract reserved rules for domain-list-custom sources in direct/proxy
+        declare -A direct_reserve_processed
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "domain-list-custom")
+              if [[ -z "${direct_reserve_processed[$name]:-}" ]]; then
+                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "false"
+                direct_reserve_processed["$name"]=1
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        declare -A proxy_reserve_processed
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "domain-list-custom")
+              if [[ -z "${proxy_reserve_processed[$name]:-}" ]]; then
+                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "true"
+                proxy_reserve_processed["$name"]=1
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")
 
     - id: deduplicate
       name: Remove redundant domains
@@ -230,9 +307,27 @@ runs:
         filter_valid_fqdn "temp-category-ads-all.txt" "reject-tld-list.txt"
 
         # Add reserved rules back
-        [ -f "direct-reserve.txt" ] && cat direct-reserve.txt >> "${CUSTOM_DATA_DIR}/cn"
-        [ -f "proxy-reserve.txt" ] && cat proxy-reserve.txt >> "${CUSTOM_DATA_DIR}/geolocation-\!cn"
-        [ -f "reject-reserve.txt" ] && cat reject-reserve.txt >> "${CUSTOM_DATA_DIR}/category-ads-all"
+        for item in $(jq -c '.sources.direct.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
+          name=$(echo "$item" | tr -d '"')
+          if [ -f "${name}-reserve.txt" ]; then
+            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/cn"
+          fi
+        done
+
+        for item in $(jq -c '.sources.proxy.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
+          name=$(echo "$item" | tr -d '"')
+          if [ -f "${name}-reserve.txt" ]; then
+            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/geolocation-\!cn"
+          fi
+        done
+
+        # Add any reject reserve rules (though none exist in current config)
+        for item in $(jq -c '.sources.reject.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
+          name=$(echo "$item" | tr -d '"')
+          if [ -f "${name}-reserve.txt" ]; then
+            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/category-ads-all"
+          fi
+        done
 
         cp "${CUSTOM_DATA_DIR}/cn" direct-list.txt
         cp "${CUSTOM_DATA_DIR}/geolocation-\!cn" proxy-list.txt
