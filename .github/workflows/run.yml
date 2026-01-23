@@ -23,7 +23,7 @@ jobs:
       - name: Checkout hidden branch (for data files)
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.repository }}
+          repository: Loyalsoldier/v2ray-rules-dat
           ref: hidden
           path: hidden-data
 
