@@ -1,0 +1,230 @@
+name: Download and Process Sources
+description: Download domain lists and process them into final lists
+
+inputs:
+  config-dir:
+    description: Directory containing sources.json config
+    required: false
+    default: ${{ github.action_path }}/../config
+  work-dir:
+    description: Working directory for processing
+    required: false
+    default: ${{ github.workspace }}
+  custom-data-dir:
+    description: Path to domain-list-community data directory
+    required: false
+    default: ${{ github.workspace }}/community/data
+
+outputs:
+  direct-count:
+    description: Final count of direct domains
+    value: ${{ steps.process.outputs.direct-count }}
+  proxy-count:
+    description: Final count of proxy domains
+    value: ${{ steps.process.outputs.proxy-count }}
+  reject-count:
+    description: Final count of reject domains
+    value: ${{ steps.process.outputs.reject-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Load common functions
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh" || true
+
+    - id: download-sources
+      name: Download all sources
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh"
+        OUTPUT_DIR="${{ inputs.work-dir }}"
+        CONFIG_DIR="${{ inputs.config-dir }}"
+        
+        cd "$OUTPUT_DIR"
+
+        # Download direct domain sources
+        curl_download "$(jq -r '.sources.direct.items[] | select(.name == "dnsmasq-china-accelerated") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-dnsmasq-china-accelerated.txt"
+        curl_download "$(jq -r '.sources.direct.items[] | select(.name == "custom-direct") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-custom-direct.txt"
+
+        # Download proxy domain sources
+        if [ -d "gfwlist2dnsmasq" ]; then
+          setup_gfwlist "gfwlist2dnsmasq" "temp-gfwlist.txt"
+        else
+          echo "Warning: gfwlist2dnsmasq directory not found" >&2
+        fi
+        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "greatfire-domains") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-greatfire.txt"
+        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "google-china") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-google-china.txt"
+        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "apple-china") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-apple-china.txt"
+        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "custom-proxy") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-custom-proxy.txt"
+
+        # Download reject domain sources
+        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "easylist") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-easylist.txt"
+        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "easylistchina-easylist") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-easylistchina.txt"
+        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "peterlowe") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-peterlowe.txt"
+        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "adguard-dns") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-adguard-dns.txt"
+        curl_download "$(jq -r '.sources.reject.items[] | select(.name == "danpollock") | .url' "${CONFIG_DIR}/sources.json")" \
+          "temp-danpollock.txt"
+
+        # Download additional sources
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "hblock") | .url' "${CONFIG_DIR}/sources.json")" \
+          "hblock.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-spy") | .url' "${CONFIG_DIR}/sources.json")" \
+          "win-spy.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-update") | .url' "${CONFIG_DIR}/sources.json")" \
+          "win-update.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "windows-extra") | .url' "${CONFIG_DIR}/sources.json")" \
+          "win-extra.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "oisd-full") | .url' "${CONFIG_DIR}/sources.json")" \
+          "oisd-full.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "steven-black") | .url' "${CONFIG_DIR}/sources.json")" \
+          "steven-black.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "energized-blu") | .url' "${CONFIG_DIR}/sources.json")" \
+          "energized-blu.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "oisd-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
+          "oisd-nsfw.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "tiuxo-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
+          "tiuxo-nsfw.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "mx-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
+          "mx-nsfw.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "sinfonietta-nsfw") | .url' "${CONFIG_DIR}/sources.json")" \
+          "sinfonietta-nsfw.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "abpid") | .url' "${CONFIG_DIR}/sources.json")" \
+          "abpid.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "abpid-adult") | .url' "${CONFIG_DIR}/sources.json")" \
+          "abpid-adult.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "doh-dns") | .url' "${CONFIG_DIR}/sources.json")" \
+          "doh.txt"
+        wget_download "$(jq -r '.sources.additional.items[] | select(.name == "prevent-bypass") | .url' "${CONFIG_DIR}/sources.json")" \
+          "prevent-bypass.txt"
+
+        # Download rule files
+        for name in rule-ads rule-gaming rule-indo rule-playstore rule-sosmed rule-streaming rule-umum rule-ipcheck rule-videoconference malicious-host hagezi-normal; do
+          url=$(jq -r ".sources.additional.items[] | select(.name == \"$name\") | .url" "${CONFIG_DIR}/sources.json")
+          output=$(jq -r ".sources.additional.items[] | select(.name == \"$name\") | .output" "${CONFIG_DIR}/sources.json")
+          if [ -n "$url" ] && [ -n "$output" ]; then
+            wget_download "$url" "$output"
+          fi
+        done
+
+    - id: process-domains
+      name: Process and extract domains
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh"
+        WORK_DIR="${{ inputs.work-dir }}"
+        cd "$WORK_DIR"
+
+        # Process direct domains
+        extract_dnsmasq_domains "temp-dnsmasq-china-accelerated.txt" "temp-direct.txt"
+        extract_domain_list_custom "temp-custom-direct.txt" "temp-direct.txt" "false"
+
+        # Process proxy domains
+        if [ -f "temp-gfwlist.txt" ]; then
+          filter_valid_fqdn "temp-gfwlist.txt" "temp-proxy.txt"
+        fi
+        if [ -f "temp-greatfire.txt" ]; then
+          extract_plain_domains "temp-greatfire.txt" "temp-proxy.txt"
+        fi
+        extract_dnsmasq_domains "temp-google-china.txt" "temp-proxy.txt"
+        extract_dnsmasq_domains "temp-apple-china.txt" "temp-proxy.txt"
+        extract_domain_list_custom "temp-custom-proxy.txt" "temp-proxy.txt" "true"
+
+        # Process reject domains
+        extract_easylist_domains "temp-easylistchina.txt" "temp-reject.txt"
+        cat "temp-easylist.txt" >> "temp-reject.txt"
+        extract_adguard_domains "temp-adguard-dns.txt" "temp-reject.txt"
+        perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})$/ && print "$1\n"' "temp-peterlowe.txt" >> "temp-reject.txt"
+        perl -ne '/^127\.0\.0\.1\s([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})/ && print "$1\n"' "temp-danpollock.txt" | sed '1d' >> "temp-reject.txt"
+
+        # Extract reserved rules
+        extract_domain_list_custom_reserved "temp-custom-direct.txt" "direct-reserve.txt" "false"
+        extract_domain_list_custom_reserved "temp-custom-proxy.txt" "proxy-reserve.txt" "true"
+
+    - id: deduplicate
+      name: Remove redundant domains
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh"
+        WORK_DIR="${{ inputs.work-dir }}"
+        CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
+        cd "$WORK_DIR"
+
+        # Merge hidden branch overrides
+        if [ -f "proxy.txt" ]; then cat "proxy.txt" >> "temp-proxy.txt"; fi
+        if [ -f "direct.txt" ]; then cat "direct.txt" >> "temp-direct.txt"; fi
+        if [ -f "reject.txt" ]; then cat "reject.txt" >> "temp-reject.txt"; fi
+
+        # Sort and deduplicate
+        sort_unique "temp-proxy.txt" "proxy-list-with-redundant"
+        sort_unique "temp-direct.txt" "direct-list-with-redundant"
+        sort_unique "temp-reject.txt" "reject-list-with-redundant"
+
+        # Remove redundant domains
+        chmod +x findRedundantDomain.py
+        ./findRedundantDomain.py ./direct-list-with-redundant ./direct-list-deleted-unsort
+        ./findRedundantDomain.py ./proxy-list-with-redundant ./proxy-list-deleted-unsort
+        ./findRedundantDomain.py ./reject-list-with-redundant ./reject-list-deleted-unsort
+
+        [ ! -f "direct-list-deleted-unsort" ] && touch direct-list-deleted-unsort
+        [ ! -f "proxy-list-deleted-unsort" ] && touch proxy-list-deleted-unsort
+        [ ! -f "reject-list-deleted-unsort" ] && touch reject-list-deleted-unsort
+
+        sort ./direct-list-deleted-unsort > ./direct-list-deleted-sort
+        sort ./proxy-list-deleted-unsort > ./proxy-list-deleted-sort
+        sort ./reject-list-deleted-unsort > ./reject-list-deleted-sort
+
+        diff ./direct-list-deleted-sort ./direct-list-with-redundant | awk '/^>/{print $2}' > ./direct-list-without-redundant
+        diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant
+        diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant
+
+        # Apply hidden branch removals
+        diff ./direct-need-to-remove.txt ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt
+        diff ./proxy-need-to-remove.txt ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt
+        diff ./reject-need-to-remove.txt ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt
+
+        # Finalize domain lists
+        mkdir -p "$CUSTOM_DATA_DIR"
+        filter_valid_domains "temp-cn.txt" "${CUSTOM_DATA_DIR}/cn"
+        filter_valid_fqdn "temp-cn.txt" "direct-tld-list.txt"
+        filter_valid_domains "temp-geolocation-\!cn.txt" "${CUSTOM_DATA_DIR}/geolocation-\!cn"
+        filter_not_cn_tld "temp-geolocation-\!cn.txt" "proxy-tld-list.txt"
+        filter_valid_domains "temp-category-ads-all.txt" "${CUSTOM_DATA_DIR}/category-ads-all"
+        filter_valid_fqdn "temp-category-ads-all.txt" "reject-tld-list.txt"
+
+        # Add reserved rules back
+        [ -f "direct-reserve.txt" ] && cat direct-reserve.txt >> "${CUSTOM_DATA_DIR}/cn"
+        [ -f "proxy-reserve.txt" ] && cat proxy-reserve.txt >> "${CUSTOM_DATA_DIR}/geolocation-\!cn"
+        [ -f "reject-reserve.txt" ] && cat reject-reserve.txt >> "${CUSTOM_DATA_DIR}/category-ads-all"
+
+        cp "${CUSTOM_DATA_DIR}/cn" direct-list.txt
+        cp "${CUSTOM_DATA_DIR}/geolocation-\!cn" proxy-list.txt
+        cp "${CUSTOM_DATA_DIR}/category-ads-all" reject-list.txt
+
+        # Set output counts
+        echo "direct-count=$(count_lines direct-list.txt)" >> "$GITHUB_OUTPUT"
+        echo "proxy-count=$(count_lines proxy-list.txt)" >> "$GITHUB_OUTPUT"
+        echo "reject-count=$(count_lines reject-list.txt)" >> "$GITHUB_OUTPUT"
+
+    - name: Summary
+      shell: bash
+      run: |
+        echo "## Download and Process Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Direct domains: ${{ steps.deduplicate.outputs.direct-count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Proxy domains: ${{ steps.deduplicate.outputs.proxy-count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Reject domains: ${{ steps.deduplicate.outputs.reject-count }}" >> $GITHUB_STEP_SUMMARY

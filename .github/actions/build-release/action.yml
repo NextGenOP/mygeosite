@@ -1,0 +1,233 @@
+name: Build and Release
+description: Build geosite.dat, create additional lists, and publish to release branch
+
+inputs:
+  config-dir:
+    description: Directory containing sources.json config
+    required: false
+    default: ${{ github.action_path }}/../config
+  work-dir:
+    description: Working directory for build
+    required: false
+    default: ${{ github.workspace }}
+  custom-dir:
+    description: Path to domain-list-custom repository
+    required: false
+    default: ${{ github.workspace }}/custom
+  community-dir:
+    description: Path to domain-list-community repository
+    required: false
+    default: ${{ github.workspace }}/community
+  release-name:
+    description: Release name
+    required: false
+    default: ${{ env.RELEASE_NAME }}
+  github-token:
+    description: GitHub token for push operations
+    required: true
+    default: ${{ secrets.GITHUB_TOKEN }}
+  repo-url:
+    description: Repository URL for git push
+    required: false
+    default: https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+outputs:
+  published-files:
+    description: Number of files published
+    value: ${{ steps.publish.outputs.count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Load common functions
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh" || true
+
+    - id: download-geoip
+      name: Download geoip.dat files
+      shell: bash
+      run: |
+        WORK_DIR="${{ inputs.work-dir }}"
+        cd "$WORK_DIR"
+
+        wget -q https://github.com/Loyalsoldier/geoip/raw/release/geoip.dat
+        wget -q https://github.com/Loyalsoldier/geoip/raw/release/geoip.dat.sha256sum
+
+    - id: create-special-lists
+      name: Create special category lists
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh"
+        WORK_DIR="${{ inputs.work-dir }}"
+        COMMUNITY_DIR="${{ inputs.community-dir }}"
+        cd "$WORK_DIR"
+
+        mkdir -p "${COMMUNITY_DIR}/data"
+
+        # Create google-cn list
+        extract_dnsmasq_full_domains "temp-google-china.txt" "${COMMUNITY_DIR}/data/google-cn"
+        cp "${COMMUNITY_DIR}/data/google-cn" google-cn.txt
+
+        # Create apple-cn list
+        extract_dnsmasq_full_domains "temp-apple-china.txt" "${COMMUNITY_DIR}/data/apple-cn"
+        cp "${COMMUNITY_DIR}/data/apple-cn" apple-cn.txt
+
+        # Create gfw list
+        if [ -f "temp-gfwlist.txt" ]; then
+          filter_valid_fqdn "temp-gfwlist.txt" "${COMMUNITY_DIR}/data/gfw"
+          sort_unique "${COMMUNITY_DIR}/data/gfw" "gfw.txt"
+          cp "gfw.txt" "${COMMUNITY_DIR}/data/gfw"
+        fi
+
+        # Create greatfire list
+        if [ -f "temp-greatfire.txt" ]; then
+          extract_plain_domains "temp-greatfire.txt" "${COMMUNITY_DIR}/data/greatfire"
+          sort_unique "${COMMUNITY_DIR}/data/greatfire" "greatfire.txt"
+          cp "greatfire.txt" "${COMMUNITY_DIR}/data/greatfire"
+        fi
+
+        # Create Windows lists
+        extract_hosts_domains "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy"
+        cp "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy"
+
+        extract_hosts_domains "win-update.txt" "${COMMUNITY_DIR}/data/win-update"
+        cp "win-update.txt" "${COMMUNITY_DIR}/data/win-update"
+
+        extract_hosts_domains "win-extra.txt" "${COMMUNITY_DIR}/data/win-extra"
+        cp "win-extra.txt" "${COMMUNITY_DIR}/data/win-extra"
+
+        # Create OISD lists
+        extract_hosts_domains "oisd-full.txt" "${COMMUNITY_DIR}/data/oisd-full"
+        cp "oisd-full.txt" "${COMMUNITY_DIR}/data/oisd-full"
+
+        cat "oisd-nsfw.txt" >> "${COMMUNITY_DIR}/data/oisd-nsfw"
+
+        # Create Steven Black list
+        extract_hosts_domains "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black"
+        cp "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black"
+
+        # Create Energized BLU list
+        extract_hosts_domains "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu"
+        cp "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu"
+
+        # Create NSFW lists
+        cat "tiuxo-nsfw.txt" >> "${COMMUNITY_DIR}/data/tiuxo-nsfw"
+        cat "mx-nsfw.txt" >> "${COMMUNITY_DIR}/data/mx-nsfw"
+        cat "sinfonietta-nsfw.txt" >> "${COMMUNITY_DIR}/data/sinfonietta-nsfw"
+        cat "oisd-nsfw.txt" >> "${COMMUNITY_DIR}/data/oisd-nsfw"
+        cat "abpid-adult.txt" >> "${COMMUNITY_DIR}/data/abpid-adult"
+
+        # Create adult list
+        cat "${COMMUNITY_DIR}/data/tiuxo-nsfw" >> "${COMMUNITY_DIR}/data/temp-adult"
+        cat "${COMMUNITY_DIR}/data/mx-nsfw" >> "${COMMUNITY_DIR}/data/temp-adult"
+        cat "${COMMUNITY_DIR}/data/sinfonietta-nsfw" >> "${COMMUNITY_DIR}/data/temp-adult"
+        cat "${COMMUNITY_DIR}/data/oisd-nsfw" >> "${COMMUNITY_DIR}/data/temp-adult"
+        cat "${COMMUNITY_DIR}/data/abpid-adult" >> "${COMMUNITY_DIR}/data/temp-adult"
+        sort_unique "${COMMUNITY_DIR}/data/temp-adult" "${COMMUNITY_DIR}/data/adult"
+        sort_unique "tiuxo-nsfw.txt" "temp-adult.txt"
+        cat "mx-nsfw.txt" >> "temp-adult.txt"
+        cat "sinfonietta-nsfw.txt" >> "temp-adult.txt"
+        cat "oisd-nsfw.txt" >> "temp-adult.txt"
+        cat "abpid-adult.txt" >> "temp-adult.txt"
+        sort_unique "temp-adult.txt" "adult.txt"
+
+        # Create prevent-bypass and adblock lists
+        if [ -f "prevent-bypass.txt" ]; then
+          cp "prevent-bypass.txt" "${COMMUNITY_DIR}/data/prevent-bypass"
+        fi
+
+        cat "reject-list.txt" >> temp-adblock.txt
+        cat "steven-black.txt" >> temp-adblock.txt
+        cat "energized-blu.txt" >> temp-adblock.txt
+        cat "oisd-full.txt" >> temp-adblock.txt
+        cat "win-spy.txt" >> temp-adblock.txt
+        cat "abpid.txt" >> temp-adblock.txt
+        cat "rule-ads.txt" >> temp-adblock.txt
+        cat "rule-malicious.txt" >> temp-adblock.txt
+        cat "hagezi-normal.txt" >> temp-adblock.txt
+        sort_unique "temp-adblock.txt" "adblock.txt"
+        cp "adblock.txt" "${COMMUNITY_DIR}/data/adblock"
+
+        # Copy rule files to community data
+        for file in rule-ads rule-doh rule-gaming rule-indo rule-playstore rule-sosmed rule-streaming rule-umum rule-ipcheck; do
+          if [ -f "${file}.txt" ]; then
+            cp "${file}.txt" "${COMMUNITY_DIR}/data/${file}"
+          fi
+        done
+
+        if [ -f "videoconference.txt" ]; then
+          cp "videoconference.txt" "${COMMUNITY_DIR}/data/videoconference"
+        fi
+
+        # Cleanup temp files
+        rm -f temp*.txt "${COMMUNITY_DIR}/data/temp*.txt"
+
+    - id: build-geosite
+      name: Build geosite.dat
+      shell: bash
+      run: |
+        CUSTOM_DIR="${{ inputs.custom-dir }}"
+        COMMUNITY_DIR="${{ inputs.community-dir }}"
+        cd "$CUSTOM_DIR" || exit 1
+        go run ./ --datapath="$COMMUNITY_DIR/data"
+
+    - id: publish
+      name: Prepare and publish files
+      shell: bash
+      run: |
+        # shellcheck source=../scripts/common.sh
+        source "${{ github.action_path }}/../scripts/common.sh"
+        WORK_DIR="${{ inputs.work-dir }}"
+        cd "$WORK_DIR"
+
+        mkdir -p publish
+
+        install_to_publish "geoip.dat" "publish"
+        install_to_publish "geoip.dat.sha256sum" "publish"
+        install_to_publish "custom/publish/geosite.dat" "publish"
+
+        install_list_files "*-tld-list.txt" "publish"
+        install_list_files "*-list.txt" "publish"
+        install_list_files "*.txt" "publish"
+
+        cd publish
+        zip rules.zip proxy-list.txt direct-list.txt reject-list.txt geoip.dat geosite.dat
+        generate_sha256 "geoip.dat"
+        generate_sha256 "geosite.dat"
+        generate_sha256 "rules.zip"
+
+        FILE_COUNT=$(ls -1 | wc -l)
+        echo "count=$FILE_COUNT" >> "$GITHUB_OUTPUT"
+
+    - id: git-push
+      name: Push to release branch
+      shell: bash
+      run: |
+        WORK_DIR="${{ inputs.work-dir }}"
+        RELEASE_NAME="${{ inputs.release-name }}"
+        REPO_URL="${{ inputs.repo-url }}"
+
+        git_init_and_push "${WORK_DIR}/publish" "$RELEASE_NAME" "release" "$REPO_URL"
+
+    - id: jsdelivr-purge
+      name: Purge jsdelivr CDN
+      shell: bash
+      run: |
+        WORK_DIR="${{ inputs.work-dir }}"
+        REPO="${{ github.repository }}"
+
+        cd "${WORK_DIR}/publish"
+        for file in $(ls); do
+          curl -sSL -X PURGE "https://purge.jsdelivr.net/gh/${REPO}@release/${file}" >/dev/null || true
+        done
+
+    - name: Summary
+      shell: bash
+      run: |
+        echo "## Build and Release Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Files published: ${{ steps.publish.outputs.count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Release: ${{ inputs.release-name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Branch: release" >> $GITHUB_STEP_SUMMARY
