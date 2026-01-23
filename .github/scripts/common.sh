@@ -75,8 +75,8 @@ extract_abp_domains() {
 	local input="$1"
 	local output="$2"
 
-	perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' "$input" |
-		perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' >>"$output"
+	# Filter out comments and metadata lines, keep only domain rules
+	grep -E '^\|\|.*\^$' "$input" | grep -v '^\|\|[0-9]' | perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' >>"$output"
 }
 
 
@@ -96,14 +96,15 @@ extract_wildcard_domains() {
 	local input="$1"
 	local output="$2"
 
-	sed 's/^\*\\.//g' >>"$output"
+	grep -v '^\s*#' "$input" | grep -v '^\s*$' | grep -v '^\s*//' | grep -v '^\s*;' | sed 's/^\*\\.//g' >>"$output"
 }
 
 extract_plain_domains() {
 	local input="$1"
 	local output="$2"
 
-	cat "$input" >> "$output"
+	# Remove comments (lines starting with #, //, ; or empty lines)
+	grep -v '^\s*#' "$input" | grep -v '^\s*$' | grep -v '^\s*//' | grep -v '^\s*;' >> "$output"
 }
 
 extract_domain_list_custom_reserved() {
