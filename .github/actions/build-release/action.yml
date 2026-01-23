@@ -30,6 +30,10 @@ inputs:
     description: Repository URL for git push
     required: false
     default: https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+  hidden-data-dir:
+    description: Path to hidden branch data directory
+    required: false
+    default: ${{ github.workspace }}/hidden-data
 
 outputs:
   published-files:

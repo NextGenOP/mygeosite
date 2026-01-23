@@ -14,6 +14,10 @@ inputs:
     description: Path to domain-list-community data directory
     required: false
     default: ${{ github.workspace }}/community/data
+  hidden-data-dir:
+    description: Path to hidden branch data directory
+    required: false
+    default: ${{ github.workspace }}/hidden-data
 
 outputs:
   direct-count:
@@ -165,10 +169,10 @@ runs:
         CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
         cd "$WORK_DIR"
 
-        # Merge hidden branch overrides
-        if [ -f "proxy.txt" ]; then cat "proxy.txt" >> "temp-proxy.txt"; fi
-        if [ -f "direct.txt" ]; then cat "direct.txt" >> "temp-direct.txt"; fi
-        if [ -f "reject.txt" ]; then cat "reject.txt" >> "temp-reject.txt"; fi
+         # Merge hidden branch overrides
+         if [ -f "${{ inputs.hidden-data-dir }}/proxy.txt" ]; then cat "${{ inputs.hidden-data-dir }}/proxy.txt" >> "temp-proxy.txt"; fi
+         if [ -f "${{ inputs.hidden-data-dir }}/direct.txt" ]; then cat "${{ inputs.hidden-data-dir }}/direct.txt" >> "temp-direct.txt"; fi
+         if [ -f "${{ inputs.hidden-data-dir }}/reject.txt" ]; then cat "${{ inputs.hidden-data-dir }}/reject.txt" >> "temp-reject.txt"; fi
 
         # Sort and deduplicate
         sort_unique "temp-proxy.txt" "proxy-list-with-redundant"
@@ -193,10 +197,22 @@ runs:
         diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant
         diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant
 
-        # Apply hidden branch removals
-        diff ./direct-need-to-remove.txt ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt
-        diff ./proxy-need-to-remove.txt ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt
-        diff ./reject-need-to-remove.txt ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt
+         # Apply hidden branch removals
+         if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
+           diff "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt
+         else
+           cp ./direct-list-without-redundant temp-cn.txt
+         fi
+         if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
+           diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt
+         else
+           cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt
+         fi
+         if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
+           diff "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt
+         else
+           cp ./reject-list-without-redundant temp-category-ads-all.txt
+         fi
 
         # Finalize domain lists
         mkdir -p "$CUSTOM_DATA_DIR"

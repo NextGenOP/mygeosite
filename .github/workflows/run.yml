@@ -17,10 +17,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (for workflow and actions)
+        uses: actions/checkout@v4
+
+      - name: Checkout hidden branch (for data files)
         uses: actions/checkout@v4
         with:
+          repository: ${{ github.repository }}
           ref: hidden
+          path: hidden-data
 
       - name: Checkout domain-list-custom
         uses: actions/checkout@v4
@@ -56,6 +61,7 @@ jobs:
           config-dir: ${{ github.workspace }}/.github/config
           work-dir: ${{ github.workspace }}
           custom-data-dir: ${{ github.workspace }}/community/data
+          hidden-data-dir: ${{ github.workspace }}/hidden-data
 
       - name: Build and Release
         uses: ./.github/actions/build-release
@@ -66,3 +72,4 @@ jobs:
           community-dir: ${{ github.workspace }}/community
           release-name: ${{ env.RELEASE_NAME }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          hidden-data-dir: ${{ github.workspace }}/hidden-data
