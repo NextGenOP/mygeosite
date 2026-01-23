@@ -242,12 +242,35 @@
           "format": "plain",
           "output": "rule-malicious.txt"
         },
-        {
-          "name": "hagezi-normal",
-          "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt",
-          "format": "plain",
-          "output": "hagezi-normal.txt"
-        }
+{
+            "name": "hagezi-normal",
+            "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt",
+            "format": "plain",
+            "output": "hagezi-normal.txt"
+          },
+          {
+            "name": "rule-bank-id",
+            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_bank-id.txt",
+            "format": "v2ray-rules",
+            "output": "rule-bank-id.txt"
+          },
+          {
+            "name": "rule-speedtest",
+            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_speedtest.txt",
+            "format": "v2ray-rules",
+            "output": "rule-speedtest.txt"
+          },
+          {
+            "name": "urltest",
+            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/urltest.txt",
+            "format": "v2ray-rules",
+            "output": "urltest.txt"
+          }
+        ]
+      }
+    }
+  }
+}
       ]
     }
   }
