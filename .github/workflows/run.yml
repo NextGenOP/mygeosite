@@ -18,37 +18,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository (for workflow and actions)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout hidden branch (for data files)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
           ref: hidden
           path: hidden-data
 
       - name: Checkout domain-list-custom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: Loyalsoldier/domain-list-custom
           path: custom
 
       - name: Checkout domain-list-community
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: v2fly/domain-list-community
           path: community
 
       - name: Checkout gfwlist2dnsmasq
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: cokebar/gfwlist2dnsmasq
           path: gfwlist2dnsmasq
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: ^1.18
+          go-version: "stable"
 
       - name: Set release variables
         run: |
