@@ -5,7 +5,7 @@ inputs:
   config-dir:
     description: Directory containing sources.json config
     required: false
-    default: ${{ github.action_path }}/../config
+    default: ${{ github.workspace }}/.github/config
   work-dir:
     description: Working directory for processing
     required: false
@@ -36,15 +36,15 @@ runs:
     - name: Load common functions
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh" || true
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh" || true
 
     - id: download-sources
       name: Download all sources
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh"
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
         OUTPUT_DIR="${{ inputs.work-dir }}"
         CONFIG_DIR="${{ inputs.config-dir }}"
         
@@ -56,20 +56,26 @@ runs:
         curl_download "$(jq -r '.sources.direct.items[] | select(.name == "custom-direct") | .url' "${CONFIG_DIR}/sources.json")" \
           "temp-custom-direct.txt"
 
-        # Download proxy domain sources
-        if [ -d "gfwlist2dnsmasq" ]; then
-          setup_gfwlist "gfwlist2dnsmasq" "temp-gfwlist.txt"
-        else
-          echo "Warning: gfwlist2dnsmasq directory not found" >&2
-        fi
-        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "greatfire-domains") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-greatfire.txt"
-        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "google-china") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-google-china.txt"
-        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "apple-china") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-apple-china.txt"
-        curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "custom-proxy") | .url' "${CONFIG_DIR}/sources.json")" \
-          "temp-custom-proxy.txt"
+         # Download proxy domain sources
+         if [ -d "gfwlist2dnsmasq" ]; then
+           setup_gfwlist "gfwlist2dnsmasq" "temp-gfwlist.txt"
+         else
+           echo "Warning: gfwlist2dnsmasq directory not found" >&2
+         fi
+         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "greatfire-domains") | .url' "${CONFIG_DIR}/sources.json")" \
+           "temp-greatfire.txt"
+         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "google-china") | .url' "${CONFIG_DIR}/sources.json")" \
+           "temp-google-china.txt"
+         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "apple-china") | .url' "${CONFIG_DIR}/sources.json")" \
+           "temp-apple-china.txt"
+         curl_download "$(jq -r '.sources.proxy.items[] | select(.name == "custom-proxy") | .url' "${CONFIG_DIR}/sources.json")" \
+           "temp-custom-proxy.txt"
+         
+         # Preserve original files for special list creation in build phase
+         cp temp-google-china.txt temp-google-china-original.txt 2>/dev/null || true
+         cp temp-apple-china.txt temp-apple-china-original.txt 2>/dev/null || true
+         cp temp-gfwlist.txt temp-gfwlist-original.txt 2>/dev/null || true
+         cp temp-greatfire.txt temp-greatfire-original.txt 2>/dev/null || true
 
         # Download reject domain sources
         curl_download "$(jq -r '.sources.reject.items[] | select(.name == "easylist") | .url' "${CONFIG_DIR}/sources.json")" \
@@ -128,8 +134,8 @@ runs:
       name: Process and extract domains
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh"
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
         WORK_DIR="${{ inputs.work-dir }}"
         cd "$WORK_DIR"
 
@@ -163,8 +169,8 @@ runs:
       name: Remove redundant domains
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh"
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
         WORK_DIR="${{ inputs.work-dir }}"
         CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
         cd "$WORK_DIR"

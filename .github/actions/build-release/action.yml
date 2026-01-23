@@ -5,7 +5,7 @@ inputs:
   config-dir:
     description: Directory containing sources.json config
     required: false
-    default: ${{ github.action_path }}/../config
+    default: ${{ github.workspace }}/.github/config
   work-dir:
     description: Working directory for build
     required: false
@@ -46,8 +46,8 @@ runs:
     - name: Load common functions
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh" || true
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh" || true
 
     - id: download-geoip
       name: Download geoip.dat files
@@ -63,35 +63,39 @@ runs:
       name: Create special category lists
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh"
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
         WORK_DIR="${{ inputs.work-dir }}"
         COMMUNITY_DIR="${{ inputs.community-dir }}"
         cd "$WORK_DIR"
 
         mkdir -p "${COMMUNITY_DIR}/data"
 
-        # Create google-cn list
-        extract_dnsmasq_full_domains "temp-google-china.txt" "${COMMUNITY_DIR}/data/google-cn"
-        cp "${COMMUNITY_DIR}/data/google-cn" google-cn.txt
+         # Create google-cn list
+         if [ -f "temp-google-china-original.txt" ]; then
+           extract_dnsmasq_full_domains "temp-google-china-original.txt" "${COMMUNITY_DIR}/data/google-cn"
+           cp "${COMMUNITY_DIR}/data/google-cn" google-cn.txt
+         fi
 
-        # Create apple-cn list
-        extract_dnsmasq_full_domains "temp-apple-china.txt" "${COMMUNITY_DIR}/data/apple-cn"
-        cp "${COMMUNITY_DIR}/data/apple-cn" apple-cn.txt
+         # Create apple-cn list
+         if [ -f "temp-apple-china-original.txt" ]; then
+           extract_dnsmasq_full_domains "temp-apple-china-original.txt" "${COMMUNITY_DIR}/data/apple-cn"
+           cp "${COMMUNITY_DIR}/data/apple-cn" apple-cn.txt
+         fi
 
-        # Create gfw list
-        if [ -f "temp-gfwlist.txt" ]; then
-          filter_valid_fqdn "temp-gfwlist.txt" "${COMMUNITY_DIR}/data/gfw"
-          sort_unique "${COMMUNITY_DIR}/data/gfw" "gfw.txt"
-          cp "gfw.txt" "${COMMUNITY_DIR}/data/gfw"
-        fi
+         # Create gfw list
+         if [ -f "temp-gfwlist-original.txt" ]; then
+           filter_valid_fqdn "temp-gfwlist-original.txt" "${COMMUNITY_DIR}/data/gfw"
+           sort_unique "${COMMUNITY_DIR}/data/gfw" "gfw.txt"
+           cp "gfw.txt" "${COMMUNITY_DIR}/data/gfw"
+         fi
 
-        # Create greatfire list
-        if [ -f "temp-greatfire.txt" ]; then
-          extract_plain_domains "temp-greatfire.txt" "${COMMUNITY_DIR}/data/greatfire"
-          sort_unique "${COMMUNITY_DIR}/data/greatfire" "greatfire.txt"
-          cp "greatfire.txt" "${COMMUNITY_DIR}/data/greatfire"
-        fi
+         # Create greatfire list
+         if [ -f "temp-greatfire-original.txt" ]; then
+           extract_plain_domains "temp-greatfire-original.txt" "${COMMUNITY_DIR}/data/greatfire"
+           sort_unique "${COMMUNITY_DIR}/data/greatfire" "greatfire.txt"
+           cp "greatfire.txt" "${COMMUNITY_DIR}/data/greatfire"
+         fi
 
         # Create Windows lists
         extract_hosts_domains "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy"
@@ -138,33 +142,58 @@ runs:
         cat "abpid-adult.txt" >> "temp-adult.txt"
         sort_unique "temp-adult.txt" "adult.txt"
 
-        # Create prevent-bypass and adblock lists
-        if [ -f "prevent-bypass.txt" ]; then
-          cp "prevent-bypass.txt" "${COMMUNITY_DIR}/data/prevent-bypass"
-        fi
+         # Create prevent-bypass and adblock lists
+         if [ -f "prevent-bypass.txt" ]; then
+           cp "prevent-bypass.txt" "${COMMUNITY_DIR}/data/prevent-bypass"
+         fi
 
-        cat "reject-list.txt" >> temp-adblock.txt
-        cat "steven-black.txt" >> temp-adblock.txt
-        cat "energized-blu.txt" >> temp-adblock.txt
-        cat "oisd-full.txt" >> temp-adblock.txt
-        cat "win-spy.txt" >> temp-adblock.txt
-        cat "abpid.txt" >> temp-adblock.txt
-        cat "rule-ads.txt" >> temp-adblock.txt
-        cat "rule-malicious.txt" >> temp-adblock.txt
-        cat "hagezi-normal.txt" >> temp-adblock.txt
-        sort_unique "temp-adblock.txt" "adblock.txt"
-        cp "adblock.txt" "${COMMUNITY_DIR}/data/adblock"
+         cat "reject-list.txt" >> temp-adblock.txt
+         cat "steven-black.txt" >> temp-adblock.txt
+         cat "energized-blu.txt" >> temp-adblock.txt
+         cat "oisd-full.txt" >> temp-adblock.txt
+         cat "win-spy.txt" >> temp-adblock.txt
+         cat "abpid.txt" >> temp-adblock.txt
+         cat "rule-ads.txt" >> temp-adblock.txt
+         if [ -f "rule-malicious.txt" ]; then
+           cat "rule-malicious.txt" >> temp-adblock.txt
+         fi
+         cat "hagezi-normal.txt" >> temp-adblock.txt
+         sort_unique "temp-adblock.txt" "adblock.txt"
+         cp "adblock.txt" "${COMMUNITY_DIR}/data/adblock"
 
-        # Copy rule files to community data
-        for file in rule-ads rule-doh rule-gaming rule-indo rule-playstore rule-sosmed rule-streaming rule-umum rule-ipcheck; do
-          if [ -f "${file}.txt" ]; then
-            cp "${file}.txt" "${COMMUNITY_DIR}/data/${file}"
-          fi
-        done
+         # Copy rule files to community data
+         # Note: rule-doh doesn't exist in sources.json, but doh.txt does
+         if [ -f "rule-ads.txt" ]; then
+           cp "rule-ads.txt" "${COMMUNITY_DIR}/data/rule-ads"
+         fi
+         if [ -f "doh.txt" ]; then
+           cp "doh.txt" "${COMMUNITY_DIR}/data/rule-doh"
+         fi
+         if [ -f "rule-gaming.txt" ]; then
+           cp "rule-gaming.txt" "${COMMUNITY_DIR}/data/rule-gaming"
+         fi
+         if [ -f "rule-indo.txt" ]; then
+           cp "rule-indo.txt" "${COMMUNITY_DIR}/data/rule-indo"
+         fi
+         if [ -f "rule-playstore.txt" ]; then
+           cp "rule-playstore.txt" "${COMMUNITY_DIR}/data/rule-playstore"
+         fi
+         if [ -f "rule-sosmed.txt" ]; then
+           cp "rule-sosmed.txt" "${COMMUNITY_DIR}/data/rule-sosmed"
+         fi
+         if [ -f "rule-streaming.txt" ]; then
+           cp "rule-streaming.txt" "${COMMUNITY_DIR}/data/rule-streaming"
+         fi
+         if [ -f "rule-umum.txt" ]; then
+           cp "rule-umum.txt" "${COMMUNITY_DIR}/data/rule-umum"
+         fi
+         if [ -f "rule-ipcheck.txt" ]; then
+           cp "rule-ipcheck.txt" "${COMMUNITY_DIR}/data/rule-ipcheck"
+         fi
 
-        if [ -f "videoconference.txt" ]; then
-          cp "videoconference.txt" "${COMMUNITY_DIR}/data/videoconference"
-        fi
+         if [ -f "videoconference.txt" ]; then
+           cp "videoconference.txt" "${COMMUNITY_DIR}/data/videoconference"
+         fi
 
         # Cleanup temp files
         rm -f temp*.txt "${COMMUNITY_DIR}/data/temp*.txt"
@@ -182,8 +211,8 @@ runs:
       name: Prepare and publish files
       shell: bash
       run: |
-        # shellcheck source=../scripts/common.sh
-        source "${{ github.action_path }}/../scripts/common.sh"
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
         WORK_DIR="${{ inputs.work-dir }}"
         cd "$WORK_DIR"
 
