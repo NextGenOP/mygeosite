@@ -66,19 +66,12 @@ extract_dnsmasq_full_domains() {
 extract_hosts_domains() {
 	local input="$1"
 	local output="$2"
-	local pattern="${3:-"0.0.0.0"}"
+	local pattern="${3:-"0.0.0.0\\|127.0.0.1"}"
 
-	grep "$pattern" "$input" | awk '{print $2}' >>"$output"
+	grep -E "$pattern" "$input" | awk '{print $2}' >>"$output"
 }
 
-extract_hosts_domains_127() {
-	local input="$1"
-	local output="$2"
-
-	grep "127.0.0.1" "$input" | awk '{print $2}' >>"$output"
-}
-
-extract_easylist_domains() {
+extract_abp_domains() {
 	local input="$1"
 	local output="$2"
 
@@ -86,13 +79,6 @@ extract_easylist_domains() {
 		perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' >>"$output"
 }
 
-extract_adguard_domains() {
-	local input="$1"
-	local output="$2"
-
-	perl -ne '/^\|\|([-_0-9a-zA-Z]+(\.[-_0-9a-zA-Z]+){1,64})\^$/ && print "$1\n"' "$input" |
-		perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' >>"$output"
-}
 
 extract_domain_list_custom() {
 	local input="$1"
@@ -106,11 +92,18 @@ extract_domain_list_custom() {
 	fi
 }
 
+extract_wildcard_domains() {
+	local input="$1"
+	local output="$2"
+
+	sed 's/^\*\\.//g' >>"$output"
+}
+
 extract_plain_domains() {
 	local input="$1"
 	local output="$2"
 
-	perl -ne '/^((?=^.{3,255})[a-zA-Z0-9][-_a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-_a-zA-Z0-9]{0,62})+)/ && print "$1\n"' "$input" >>"$output"
+	cat "$input" >> "$output"
 }
 
 extract_domain_list_custom_reserved() {

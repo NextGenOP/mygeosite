@@ -58,15 +58,15 @@
       "description": "Domains that should be blocked (ads, malware, tracking)",
       "items": [
         {
-          "name": "easylist",
+          "name": "abp",
           "url": "https://hmirror.molinero.dev/easylist/list.txt",
-          "format": "easylist",
+          "format": "abp",
           "output": "temp-reject.txt"
         },
         {
           "name": "easylistchina-easylist",
           "url": "https://easylist-downloads.adblockplus.org/easylistchina+easylist.txt",
-          "format": "easylist",
+          "format": "abp",
           "output": "temp-reject.txt"
         },
         {
@@ -78,7 +78,7 @@
         {
           "name": "adguard-dns",
           "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
-          "format": "adguard",
+          "format": "abp",
           "output": "temp-reject.txt"
         },
         {
@@ -118,8 +118,8 @@
         },
         {
           "name": "oisd-full",
-          "url": "https://hosts.oisd.nl/",
-          "format": "hosts",
+          "url": "https://big.oisd.nl/domainswild2",
+          "format": "wildcard",
           "output": "oisd-full.txt"
         },
         {
@@ -136,8 +136,8 @@
         },
         {
           "name": "oisd-nsfw",
-          "url": "https://hosts.oisd.nl/nsfw/",
-          "format": "hosts",
+          "url": "https://nsfw.oisd.nl/domainswild2",
+          "format": "wildcard",
           "output": "oisd-nsfw.txt"
         },
         {
@@ -179,7 +179,7 @@
         {
           "name": "prevent-bypass",
           "url": "https://raw.githubusercontent.com/nextdns/metadata/master/parentalcontrol/bypass-methods",
-          "format": "adguard",
+          "format": "abp",
           "output": "prevent-bypass.txt"
         },
         {
@@ -242,35 +242,30 @@
           "format": "plain",
           "output": "rule-malicious.txt"
         },
-{
-            "name": "hagezi-normal",
-            "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt",
-            "format": "plain",
-            "output": "hagezi-normal.txt"
-          },
-          {
-            "name": "rule-bank-id",
-            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_bank-id.txt",
-            "format": "v2ray-rules",
-            "output": "rule-bank-id.txt"
-          },
-          {
-            "name": "rule-speedtest",
-            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_speedtest.txt",
-            "format": "v2ray-rules",
-            "output": "rule-speedtest.txt"
-          },
-          {
-            "name": "urltest",
-            "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/urltest.txt",
-            "format": "v2ray-rules",
-            "output": "urltest.txt"
-          }
-        ]
-      }
-    }
-  }
-}
+        {
+          "name": "hagezi-normal",
+          "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt",
+          "format": "plain",
+          "output": "hagezi-normal.txt"
+        },
+        {
+          "name": "rule-bank-id",
+          "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_bank-id.txt",
+          "format": "v2ray-rules",
+          "output": "rule-bank-id.txt"
+        },
+        {
+          "name": "rule-speedtest",
+          "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/rule_speedtest.txt",
+          "format": "v2ray-rules",
+          "output": "rule-speedtest.txt"
+        },
+        {
+          "name": "urltest",
+          "url": "https://raw.githubusercontent.com/malikshi/v2ray-rules-dat/rule/urltest.txt",
+          "format": "v2ray-rules",
+          "output": "urltest.txt"
+        }
       ]
     }
   }

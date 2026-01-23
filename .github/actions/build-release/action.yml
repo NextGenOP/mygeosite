@@ -98,27 +98,27 @@ runs:
          fi
 
         # Create Windows lists
-        extract_hosts_domains "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy"
+        extract_hosts_domains "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy" "0.0.0.0"
         cp "win-spy.txt" "${COMMUNITY_DIR}/data/win-spy"
 
-        extract_hosts_domains "win-update.txt" "${COMMUNITY_DIR}/data/win-update"
+        extract_hosts_domains "win-update.txt" "${COMMUNITY_DIR}/data/win-update" "0.0.0.0"
         cp "win-update.txt" "${COMMUNITY_DIR}/data/win-update"
 
-        extract_hosts_domains "win-extra.txt" "${COMMUNITY_DIR}/data/win-extra"
+        extract_hosts_domains "win-extra.txt" "${COMMUNITY_DIR}/data/win-extra" "0.0.0.0"
         cp "win-extra.txt" "${COMMUNITY_DIR}/data/win-extra"
 
         # Create OISD lists
-        extract_hosts_domains "oisd-full.txt" "${COMMUNITY_DIR}/data/oisd-full"
+        extract_hosts_domains "oisd-full.txt" "${COMMUNITY_DIR}/data/oisd-full" "0.0.0.0"
         cp "oisd-full.txt" "${COMMUNITY_DIR}/data/oisd-full"
 
         cat "oisd-nsfw.txt" >> "${COMMUNITY_DIR}/data/oisd-nsfw"
 
         # Create Steven Black list
-        extract_hosts_domains "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black"
+        extract_hosts_domains "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black" "0.0.0.0"
         cp "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black"
 
         # Create Energized BLU list
-        extract_hosts_domains "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu"
+        extract_hosts_domains "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu" "0.0.0.0"
         cp "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu"
 
         # Create NSFW lists

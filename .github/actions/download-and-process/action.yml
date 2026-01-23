@@ -193,18 +193,17 @@ runs:
           fi
 
           case "$format" in
-            "easylist")
-              extract_easylist_domains "temp-$name.txt" "$output"
-              ;;
-            "adguard")
-              extract_adguard_domains "temp-$name.txt" "$output"
+            "abp")
+              extract_abp_domains "temp-$name.txt" "$output"
               ;;
             "hosts")
-              extract_hosts_domains_127 "temp-$name.txt" "$output"
+              extract_hosts_domains "temp-$name.txt" "$output"
               ;;
             "plain")
               extract_plain_domains "temp-$name.txt" "$output"
               ;;
+            "wildcard")
+              extract_wildcard_domains "temp-$name.txt" "$output"
             *)
               echo "Unknown format '$format' for $name" >&2
               ;;
