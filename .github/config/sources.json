@@ -129,12 +129,6 @@
           "output": "steven-black.txt"
         },
         {
-          "name": "energized-blu",
-          "url": "https://energized.pro/blu/formats/hosts.txt",
-          "format": "hosts",
-          "output": "energized-blu.txt"
-        },
-        {
           "name": "oisd-nsfw",
           "url": "https://nsfw.oisd.nl/domainswild2",
           "format": "wildcard",
@@ -244,8 +238,8 @@
         },
         {
           "name": "hagezi-normal",
-          "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/domains/multi.txt",
-          "format": "plain",
+          "url": "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/multi-onlydomains.txt",
+          "format": "wildcard",
           "output": "hagezi-normal.txt"
         },
         {

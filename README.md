@@ -186,7 +186,6 @@ Aggregated from multiple authoritative sources:
 - `geosite:oisd-full` - OISD comprehensive blocking list
 - `geosite:oisd-nsfw` - OISD NSFW content blocking
 - `geosite:steven-black` - Steven Black unified hosts list
-- `geosite:energized-blu` - Energized Protection anti-malware list
 - `geosite:adult` - Adult/NSFW content domains
 - `geosite:adblock` - Combined ad-blocking list
 - `geosite:prevent-bypass` - Parental control bypass prevention
@@ -238,7 +237,6 @@ geosite:win-update           → Reject (Block)
 geosite:adblock              → Reject (Block ads/malware)
 geosite:oisd-full            → Reject (Comprehensive protection)
 geosite:steven-black         → Reject (Unified blocking)
-geosite:energized-blu        → Reject (Anti-malware)
 geosite:hblock               → Reject (Malware/phishing)
 ```
 
@@ -356,7 +354,6 @@ This project aggregates data from multiple open-source initiatives:
 - [crazy-max/WindowsSpyBlocker](https://github.com/crazy-max/WindowsSpyBlocker) - Windows telemetry blocking
 - [OISD.nl](https://hosts.oisd.nl/) - Comprehensive blocking lists (normal and NSFW)
 - [StevenBlack/hosts](https://github.com/StevenBlack/hosts) - Unified hosts file
-- [EnergizedProtection/block](https://energized.pro/) - Anti-malware protection
 - [Tiuxo/hosts/porn](https://github.com/tiuxo/hosts) - NSFW content blocking
 - [mhxion/pornaway](https://github.com/mhxion/pornaway) - Pornography site blocking
 - [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) - NSFW host files

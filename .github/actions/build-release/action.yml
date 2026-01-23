@@ -117,10 +117,6 @@ runs:
         extract_hosts_domains "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black" "0.0.0.0"
         cp "steven-black.txt" "${COMMUNITY_DIR}/data/steven-black"
 
-        # Create Energized BLU list
-        extract_hosts_domains "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu" "0.0.0.0"
-        cp "energized-blu.txt" "${COMMUNITY_DIR}/data/energized-blu"
-
         # Create NSFW lists
         cat "tiuxo-nsfw.txt" >> "${COMMUNITY_DIR}/data/tiuxo-nsfw"
         cat "mx-nsfw.txt" >> "${COMMUNITY_DIR}/data/mx-nsfw"
@@ -149,7 +145,6 @@ runs:
 
          cat "reject-list.txt" >> temp-adblock.txt
          cat "steven-black.txt" >> temp-adblock.txt
-         cat "energized-blu.txt" >> temp-adblock.txt
          cat "oisd-full.txt" >> temp-adblock.txt
          cat "win-spy.txt" >> temp-adblock.txt
          cat "abpid.txt" >> temp-adblock.txt
