@@ -64,11 +64,12 @@ extract_dnsmasq_full_domains() {
 }
 
 extract_hosts_domains() {
-	local input="$1"
-	local output="$2"
-	local pattern="${3:-"0.0.0.0\\|127.0.0.1"}"
-
-	grep -E "$pattern" "$input" | awk '{print $2}' >>"$output"
+    local input="$1"
+    local output="$2"
+    local pattern="${3:-"0\.0\.0\.0|127\.0\.0\.1"}"
+    
+    grep -E "^($pattern)[[:blank:]]" "$input" | \
+    awk '{print $2}' >> "$output"
 }
 
 extract_domain_list_custom() {
