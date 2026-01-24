@@ -95,15 +95,15 @@
         },
         {
           "name": "oisd-big",
-          "url": "https://big.oisd.nl/domainswild2",
-          "format": "wildcard",
+          "url": "https://raw.githubusercontent.com/cbuijs/oisd/refs/heads/master/big/domains",
+          "format": "plain",
           "output": "oisd-big.txt",
           "group": "adblock"
         },
         {
           "name": "oisd-small",
-          "url": "https://small.oisd.nl/domainswild2",
-          "format": "wildcard",
+          "url": "https://raw.githubusercontent.com/cbuijs/oisd/refs/heads/master/small/domains",
+          "format": "plain",
           "output": "oisd-small.txt",
           "group": "adblock"
         },
@@ -172,8 +172,8 @@
         },
         {
           "name": "oisd-nsfw",
-          "url": "https://nsfw.oisd.nl/domainswild2",
-          "format": "wildcard",
+          "url": "https://raw.githubusercontent.com/cbuijs/oisd/refs/heads/master/nsfw/domains",
+          "format": "plain",
           "output": "oisd-nsfw.txt",
           "group": "adult"
         },
