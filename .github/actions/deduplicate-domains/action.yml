@@ -44,104 +44,245 @@ runs:
       shell: bash
       run: |
         # shellcheck source=.github/scripts/common.sh
+        if [[ ! -f "${{ github.workspace }}/.github/scripts/common.sh" ]]; then
+          echo "ERROR: Common functions file not found at ${{ github.workspace }}/.github/scripts/common.sh" >&2
+          exit 1
+        fi
         source "${{ github.workspace }}/.github/scripts/common.sh"
+        
+        # Validate working directory exists
         WORK_DIR="${{ inputs.work-dir }}"
-        CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
+        if [[ ! -d "$WORK_DIR" ]]; then
+          echo "ERROR: Working directory '$WORK_DIR' does not exist" >&2
+          exit 1
+        fi
         cd "$WORK_DIR"
 
          # Merge hidden branch overrides
-         if [ -f "${{ inputs.hidden-data-dir }}/proxy.txt" ]; then cat "${{ inputs.hidden-data-dir }}/proxy.txt" >> "temp-proxy.txt"; fi
-         if [ -f "${{ inputs.hidden-data-dir }}/direct.txt" ]; then cat "${{ inputs.hidden-data-dir }}/direct.txt" >> "temp-direct.txt"; fi
-         if [ -f "${{ inputs.hidden-data-dir }}/reject.txt" ]; then cat "${{ inputs.hidden-data-dir }}/reject.txt" >> "temp-reject.txt"; fi
+         if [ -f "${{ inputs.hidden-data-dir }}/proxy.txt" ]; then
+           cat "${{ inputs.hidden-data-dir }}/proxy.txt" >> "temp-proxy.txt" || {
+             echo "ERROR: Failed to merge proxy.txt from hidden branch" >&2
+             exit 1
+           }
+         fi
+         if [ -f "${{ inputs.hidden-data-dir }}/direct.txt" ]; then
+           cat "${{ inputs.hidden-data-dir }}/direct.txt" >> "temp-direct.txt" || {
+             echo "ERROR: Failed to merge direct.txt from hidden branch" >&2
+             exit 1
+           }
+         fi
+         if [ -f "${{ inputs.hidden-data-dir }}/reject.txt" ]; then
+           cat "${{ inputs.hidden-data-dir }}/reject.txt" >> "temp-reject.txt" || {
+             echo "ERROR: Failed to merge reject.txt from hidden branch" >&2
+             exit 1
+           }
+         fi
 
-        # Sort and deduplicate
-        sort_unique "temp-proxy.txt" "proxy-list-with-redundant"
-        sort_unique "temp-direct.txt" "direct-list-with-redundant"
-        sort_unique "temp-reject.txt" "reject-list-with-redundant"
+         # Sort and deduplicate
+         sort_unique "temp-proxy.txt" "proxy-list-with-redundant" || {
+           echo "ERROR: Failed to sort and deduplicate proxy domains" >&2
+           exit 1
+         }
+         sort_unique "temp-direct.txt" "direct-list-with-redundant" || {
+           echo "ERROR: Failed to sort and deduplicate direct domains" >&2
+           exit 1
+         }
+         sort_unique "temp-reject.txt" "reject-list-with-redundant" || {
+           echo "ERROR: Failed to sort and deduplicate reject domains" >&2
+           exit 1
+         }
 
-        # Remove redundant domains
-        if [ -f "${{inputs.hidden-data-dir}}/findRedundantDomain.py" ]; then
-          cp "${{inputs.hidden-data-dir}}/findRedundantDomain.py" .
-          chmod +x findRedundantDomain.py
-        fi
-        ./findRedundantDomain.py ./direct-list-with-redundant ./direct-list-deleted-unsort
-        ./findRedundantDomain.py ./proxy-list-with-redundant ./proxy-list-deleted-unsort
-        ./findRedundantDomain.py ./reject-list-with-redundant ./reject-list-deleted-unsort
+         # Remove redundant domains
+         if [ -f "${{inputs.hidden-data-dir}}/findRedundantDomain.py" ]; then
+           cp "${{inputs.hidden-data-dir}}/findRedundantDomain.py" . || {
+             echo "ERROR: Failed to copy findRedundantDomain.py" >&2
+             exit 1
+           }
+           chmod +x findRedundantDomain.py || {
+             echo "ERROR: Failed to make findRedundantDomain.py executable" >&2
+             exit 1
+           }
+         fi
+         ./findRedundantDomain.py ./direct-list-with-redundant ./direct-list-deleted-unsort || {
+           echo "ERROR: Failed to remove redundant direct domains" >&2
+           exit 1
+         }
+         ./findRedundantDomain.py ./proxy-list-with-redundant ./proxy-list-deleted-unsort || {
+           echo "ERROR: Failed to remove redundant proxy domains" >&2
+           exit 1
+         }
+         ./findRedundantDomain.py ./reject-list-with-redundant ./reject-list-deleted-unsort || {
+           echo "ERROR: Failed to remove redundant reject domains" >&2
+           exit 1
+         }
 
         [ ! -f "direct-list-deleted-unsort" ] && touch direct-list-deleted-unsort
         [ ! -f "proxy-list-deleted-unsort" ] && touch proxy-list-deleted-unsort
         [ ! -f "reject-list-deleted-unsort" ] && touch reject-list-deleted-unsort
 
-        sort ./direct-list-deleted-unsort > ./direct-list-deleted-sort
-        sort ./proxy-list-deleted-unsort > ./proxy-list-deleted-sort
-        sort ./reject-list-deleted-unsort > ./reject-list-deleted-sort
+         sort ./direct-list-deleted-unsort > ./direct-list-deleted-sort || {
+           echo "ERROR: Failed to sort direct-list-deleted-unsort" >&2
+           exit 1
+         }
+         sort ./proxy-list-deleted-unsort > ./proxy-list-deleted-sort || {
+           echo "ERROR: Failed to sort proxy-list-deleted-unsort" >&2
+           exit 1
+         }
+         sort ./reject-list-deleted-unsort > ./reject-list-deleted-sort || {
+           echo "ERROR: Failed to sort reject-list-deleted-unsort" >&2
+           exit 1
+         }
 
-        diff ./direct-list-deleted-sort ./direct-list-with-redundant | awk '/^>/{print $2}' > ./direct-list-without-redundant
-        diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant
-        diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant
+         diff ./direct-list-deleted-sort ./direct-list-with-redundant | awk '/^>/{print $2}' > ./direct-list-without-redundant || {
+           echo "ERROR: Failed to create direct-list-without-redundant" >&2
+           exit 1
+         }
+         diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant || {
+           echo "ERROR: Failed to create proxy-list-without-redundant" >&2
+           exit 1
+         }
+         diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant || {
+           echo "ERROR: Failed to create reject-list-without-redundant" >&2
+           exit 1
+         }
 
-         # Apply hidden branch removals
-         if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
-           diff "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt
-         else
-           cp ./direct-list-without-redundant temp-cn.txt
-         fi
-         if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
-           diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt
-         else
-           cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt
-         fi
-         if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
-           diff "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt
-         else
-           cp ./reject-list-without-redundant temp-category-ads-all.txt
-         fi
+          # Apply hidden branch removals
+          if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
+            diff "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt || {
+              echo "ERROR: Failed to apply hidden branch removals for direct domains" >&2
+              exit 1
+            }
+          else
+            cp ./direct-list-without-redundant temp-cn.txt || {
+              echo "ERROR: Failed to copy direct-list-without-redundant to temp-cn.txt" >&2
+              exit 1
+            }
+          fi
+          if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
+            diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt || {
+              echo "ERROR: Failed to apply hidden branch removals for proxy domains" >&2
+              exit 1
+            }
+          else
+            cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
+              echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
+              exit 1
+            }
+          fi
+          if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
+            diff "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt || {
+              echo "ERROR: Failed to apply hidden branch removals for reject domains" >&2
+              exit 1
+            }
+          else
+            cp ./reject-list-without-redundant temp-category-ads-all.txt || {
+              echo "ERROR: Failed to copy reject-list-without-redundant to temp-category-ads-all.txt" >&2
+              exit 1
+            }
+          fi
 
     - id: finalize
       name: Finalize domain lists
       shell: bash
       run: |
         # shellcheck source=.github/scripts/common.sh
+        if [[ ! -f "${{ github.workspace }}/.github/scripts/common.sh" ]]; then
+          echo "ERROR: Common functions file not found at ${{ github.workspace }}/.github/scripts/common.sh" >&2
+          exit 1
+        fi
         source "${{ github.workspace }}/.github/scripts/common.sh"
+        
+        # Validate working directory exists
         WORK_DIR="${{ inputs.work-dir }}"
-        CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
+        if [[ ! -d "$WORK_DIR" ]]; then
+          echo "ERROR: Working directory '$WORK_DIR' does not exist" >&2
+          exit 1
+        fi
         cd "$WORK_DIR"
 
-        # Finalize domain lists
-        mkdir -p "$CUSTOM_DATA_DIR"
-        filter_valid_domains "temp-cn.txt" "${CUSTOM_DATA_DIR}/cn"
-        filter_valid_fqdn "temp-cn.txt" "direct-tld-list.txt"
-        filter_valid_domains "temp-geolocation-\!cn.txt" "${CUSTOM_DATA_DIR}/geolocation-\!cn"
-        filter_not_cn_tld "temp-geolocation-\!cn.txt" "proxy-tld-list.txt"
-        filter_valid_domains "temp-category-ads-all.txt" "${CUSTOM_DATA_DIR}/category-ads-all"
-        filter_valid_fqdn "temp-category-ads-all.txt" "reject-tld-list.txt"
+         # Finalize domain lists
+         mkdir -p "$CUSTOM_DATA_DIR" || {
+           echo "ERROR: Failed to create custom data directory" >&2
+           exit 1
+         }
+         filter_valid_domains "temp-cn.txt" "${CUSTOM_DATA_DIR}/cn" || {
+           echo "ERROR: Failed to filter valid domains for cn" >&2
+           exit 1
+         }
+         filter_valid_fqdn "temp-cn.txt" "direct-tld-list.txt" || {
+           echo "ERROR: Failed to filter valid FQDN for direct-tld-list" >&2
+           exit 1
+         }
+         filter_valid_domains "temp-geolocation-\!cn.txt" "${CUSTOM_DATA_DIR}/geolocation-\!cn" || {
+           echo "ERROR: Failed to filter valid domains for geolocation-\!cn" >&2
+           exit 1
+         }
+         filter_not_cn_tld "temp-geolocation-\!cn.txt" "proxy-tld-list.txt" || {
+           echo "ERROR: Failed to filter non-CN TLD for proxy-tld-list" >&2
+           exit 1
+         }
+         filter_valid_domains "temp-category-ads-all.txt" "${CUSTOM_DATA_DIR}/category-ads-all" || {
+           echo "ERROR: Failed to filter valid domains for category-ads-all" >&2
+           exit 1
+         }
+         filter_valid_fqdn "temp-category-ads-all.txt" "reject-tld-list.txt" || {
+           echo "ERROR: Failed to filter valid FQDN for reject-tld-list" >&2
+           exit 1
+         }
 
-        # Add reserved rules back
-        for item in $(jq -c '.sources.direct.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
-          name=$(echo "$item" | tr -d '"')
-          if [ -f "${name}-reserve.txt" ]; then
-            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/cn"
-          fi
-        done
+         # Add reserved rules back
+         for item in $(jq -c '.sources.direct.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json" 2>/dev/null); do
+           name=$(echo "$item" | tr -d '"')
+           if [ -f "${name}-reserve.txt" ]; then
+             cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/cn" || {
+               echo "ERROR: Failed to add reserved rules for direct source $name" >&2
+               exit 1
+             }
+           fi
+         done || {
+           echo "ERROR: Failed to parse direct sources for reserved rules" >&2
+           exit 1
+         }
 
-        for item in $(jq -c '.sources.proxy.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
-          name=$(echo "$item" | tr -d '"')
-          if [ -f "${name}-reserve.txt" ]; then
-            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/geolocation-\!cn"
-          fi
-        done
+         for item in $(jq -c '.sources.proxy.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json" 2>/dev/null); do
+           name=$(echo "$item" | tr -d '"')
+           if [ -f "${name}-reserve.txt" ]; then
+             cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/geolocation-\!cn" || {
+               echo "ERROR: Failed to add reserved rules for proxy source $name" >&2
+               exit 1
+             }
+           fi
+         done || {
+           echo "ERROR: Failed to parse proxy sources for reserved rules" >&2
+           exit 1
+         }
 
-        # Add any reject reserve rules (though none exist in current config)
-        for item in $(jq -c '.sources.reject.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json"); do
-          name=$(echo "$item" | tr -d '"')
-          if [ -f "${name}-reserve.txt" ]; then
-            cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/category-ads-all"
-          fi
-        done
+         # Add any reject reserve rules (though none exist in current config)
+         for item in $(jq -c '.sources.reject.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json" 2>/dev/null); do
+           name=$(echo "$item" | tr -d '"')
+           if [ -f "${name}-reserve.txt" ]; then
+             cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/category-ads-all" || {
+               echo "ERROR: Failed to add reserved rules for reject source $name" >&2
+               exit 1
+             }
+           fi
+         done || {
+           echo "ERROR: Failed to parse reject sources for reserved rules" >&2
+           exit 1
+         }
 
-        cp "${CUSTOM_DATA_DIR}/cn" direct-list.txt
-        cp "${CUSTOM_DATA_DIR}/geolocation-\!cn" proxy-list.txt
-        cp "${CUSTOM_DATA_DIR}/category-ads-all" reject-list.txt
+         cp "${CUSTOM_DATA_DIR}/cn" direct-list.txt || {
+           echo "ERROR: Failed to copy cn to direct-list.txt" >&2
+           exit 1
+         }
+         cp "${CUSTOM_DATA_DIR}/geolocation-\!cn" proxy-list.txt || {
+           echo "ERROR: Failed to copy geolocation-\!cn to proxy-list.txt" >&2
+           exit 1
+         }
+         cp "${CUSTOM_DATA_DIR}/category-ads-all" reject-list.txt || {
+           echo "ERROR: Failed to copy category-ads-all to reject-list.txt" >&2
+           exit 1
+         }
 
         # Set output counts
         echo "direct-count=$(count_lines direct-list.txt)" >> "$GITHUB_OUTPUT"
