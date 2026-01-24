@@ -58,9 +58,9 @@
       "description": "Domains that should be blocked (ads, malware, tracking)",
       "items": [
         {
-          "name": "abp",
+          "name": "easylist",
           "url": "https://hmirror.molinero.dev/easylist/list.txt",
-          "format": "abp",
+          "format": "plain",
           "output": "temp-reject.txt"
         },
         {
