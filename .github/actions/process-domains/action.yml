@@ -29,130 +29,316 @@ runs:
       shell: bash
       run: |
         # shellcheck source=.github/scripts/common.sh
+        if [[ ! -f "${{ github.workspace }}/.github/scripts/common.sh" ]]; then
+          echo "ERROR: Common functions file not found at ${{ github.workspace }}/.github/scripts/common.sh" >&2
+          exit 1
+        fi
         source "${{ github.workspace }}/.github/scripts/common.sh"
+        
+        # Validate config directory exists
+        if [[ ! -d "${{ inputs.config-dir }}" ]]; then
+          echo "ERROR: Config directory '${{ inputs.config-dir }}' does not exist" >&2
+          exit 1
+        fi
+        
+        # Validate sources.json exists
+        if [[ ! -f "${{ inputs.config-dir }}/sources.json" ]]; then
+          echo "ERROR: Config file '${{ inputs.config-dir }}/sources.json' does not exist" >&2
+          exit 1
+        fi
+        
         WORK_DIR="${{ inputs.work-dir }}"
+        if [[ ! -d "$WORK_DIR" ]]; then
+          echo "ERROR: Working directory '$WORK_DIR' does not exist" >&2
+          exit 1
+        fi
         cd "$WORK_DIR"
 
         # Process all direct sources into their respective output files
         declare -A direct_processed_outputs
-        while IFS= read -r line; do
-          name=$(echo "$line" | jq -r '.name')
-          format=$(echo "$line" | jq -r '.format')
-          output=$(echo "$line" | jq -r '.output')
+        if jq -e '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json" >/dev/null 2>&1; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+            name=$(echo "$line" | jq -r '.name // empty')
+            if [[ -z "$name" ]]; then
+              echo "WARNING: Skipping entry with empty name in direct sources" >&2
+              continue
+            fi
+            format=$(echo "$line" | jq -r '.format // empty')
+            output=$(echo "$line" | jq -r '.output // empty')
 
-          # Check if we already processed this output file
-          if [[ -z "${direct_processed_outputs[$output]:-}" ]]; then
-            # Clear the output file if it exists
-            > "$output"
-            direct_processed_outputs["$output"]=1
-          fi
+            # Check if we already processed this output file
+            if [[ -z "${direct_processed_outputs[$output]:-}" ]]; then
+              # Clear the output file if it exists
+              > "$output"
+              direct_processed_outputs["$output"]=1
+            fi
 
-          case "$format" in
-            "dnsmasq")
-              extract_dnsmasq_domains "temp-$name.txt" "$output"
-              ;;
-            "domain-list-custom")
-              extract_domain_list_custom "temp-$name.txt" "$output" "false"
-              ;;
-            *)
-              echo "Unknown format '$format' for $name" >&2
-              ;;
-          esac
-        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
+            case "$format" in
+              "dnsmasq")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_dnsmasq_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract dnsmasq domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "domain-list-custom")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_domain_list_custom "temp-$name.txt" "$output" "false" || {
+                  echo "ERROR: Failed to extract domain-list-custom domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "")
+                echo "WARNING: Empty format for $name, skipping" >&2
+                ;;
+              *)
+                echo "Unknown format '$format' for $name" >&2
+                ;;
+            esac
+          done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json" 2>/dev/null || {
+            echo "ERROR: Failed to parse direct sources from ${{ inputs.config-dir }}/sources.json" >&2
+            exit 1
+          })
+        else
+          echo "INFO: No direct sources configured" >&2
+        fi
 
         # Process all proxy sources into their respective output files
         declare -A proxy_processed_outputs
-        while IFS= read -r line; do
-          name=$(echo "$line" | jq -r '.name')
-          format=$(echo "$line" | jq -r '.format')
-          output=$(echo "$line" | jq -r '.output')
+        if jq -e '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json" >/dev/null 2>&1; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+            name=$(echo "$line" | jq -r '.name // empty')
+            if [[ -z "$name" ]]; then
+              echo "WARNING: Skipping entry with empty name in proxy sources" >&2
+              continue
+            fi
+            format=$(echo "$line" | jq -r '.format // empty')
+            output=$(echo "$line" | jq -r '.output // empty')
 
-          # Check if we already processed this output file
-          if [[ -z "${proxy_processed_outputs[$output]:-}" ]]; then
-            # Clear the output file if it exists
-            > "$output"
-            proxy_processed_outputs["$output"]=1
-          fi
+            # Check if we already processed this output file
+            if [[ -z "${proxy_processed_outputs[$output]:-}" ]]; then
+              # Clear the output file if it exists
+              > "$output"
+              proxy_processed_outputs["$output"]=1
+            fi
 
-          case "$format" in
-            "dnsmasq")
-              extract_dnsmasq_domains "temp-$name.txt" "$output"
-              ;;
-            "domain-list-custom")
-              extract_domain_list_custom "temp-$name.txt" "$output" "true"
-              ;;
-            "plain")
-              extract_plain_domains "temp-$name.txt" "$output"
-              ;;
-            "gfwlist")
-              filter_valid_fqdn "temp-$name.txt" "$output"
-              ;;
-            *)
-              echo "Unknown format '$format' for $name" >&2
-              ;;
-          esac
-        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")
+            case "$format" in
+              "dnsmasq")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_dnsmasq_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract dnsmasq domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "domain-list-custom")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_domain_list_custom "temp-$name.txt" "$output" "true" || {
+                  echo "ERROR: Failed to extract domain-list-custom domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "plain")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_plain_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract plain domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "gfwlist")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                filter_valid_fqdn "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to filter FQDN for $name" >&2
+                  exit 1
+                }
+                ;;
+              "")
+                echo "WARNING: Empty format for $name, skipping" >&2
+                ;;
+              *)
+                echo "Unknown format '$format' for $name" >&2
+                ;;
+            esac
+          done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json" 2>/dev/null || {
+            echo "ERROR: Failed to parse proxy sources from ${{ inputs.config-dir }}/sources.json" >&2
+            exit 1
+          })
+        else
+          echo "INFO: No proxy sources configured" >&2
+        fi
 
         # Process all reject sources into their respective output files
         declare -A reject_processed_outputs
-        while IFS= read -r line; do
-          name=$(echo "$line" | jq -r '.name')
-          format=$(echo "$line" | jq -r '.format')
-          output=$(echo "$line" | jq -r '.output')
+        if jq -e '.sources.reject.items[]' "${{ inputs.config-dir }}/sources.json" >/dev/null 2>&1; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+            name=$(echo "$line" | jq -r '.name // empty')
+            if [[ -z "$name" ]]; then
+              echo "WARNING: Skipping entry with empty name in reject sources" >&2
+              continue
+            fi
+            format=$(echo "$line" | jq -r '.format // empty')
+            output=$(echo "$line" | jq -r '.output // empty')
 
-          # Check if we already processed this output file
-          if [[ -z "${reject_processed_outputs[$output]:-}" ]]; then
-            # Clear the output file if it exists
-            > "$output"
-            reject_processed_outputs["$output"]=1
-          fi
+            # Check if we already processed this output file
+            if [[ -z "${reject_processed_outputs[$output]:-}" ]]; then
+              # Clear the output file if it exists
+              > "$output"
+              reject_processed_outputs["$output"]=1
+            fi
 
-          case "$format" in
-            "abp")
-              extract_abp_domains "temp-$name.txt" "$output"
-              ;;
-            "hosts")
-              extract_hosts_domains "temp-$name.txt" "$output"
-              ;;
-            "plain")
-              cp "temp-$name.txt" "$output"
-              ;;
-            "wildcard")
-              extract_wildcard_domains "temp-$name.txt" "$output"
-              ;;
-            *)
-              echo "Unknown format '$format' for $name" >&2
-              ;;
-          esac
-        done < <(jq -c '.sources.reject.items[]' "${{ inputs.config-dir }}/sources.json")
+            case "$format" in
+              "abp")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_abp_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract ABP domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "hosts")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_hosts_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract hosts domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "plain")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                elif [[ ! -f "$output" ]]; then
+                  cp "temp-$name.txt" "$output" || {
+                    echo "ERROR: Failed to copy plain domains for $name" >&2
+                    exit 1
+                  }
+                else
+                  cat "temp-$name.txt" >> "$output" || {
+                    echo "ERROR: Failed to append plain domains for $name" >&2
+                    exit 1
+                  }
+                fi
+                ;;
+              "wildcard")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping" >&2
+                  continue
+                fi
+                extract_wildcard_domains "temp-$name.txt" "$output" || {
+                  echo "ERROR: Failed to extract wildcard domains for $name" >&2
+                  exit 1
+                }
+                ;;
+              "")
+                echo "WARNING: Empty format for $name, skipping" >&2
+                ;;
+              *)
+                echo "Unknown format '$format' for $name" >&2
+                ;;
+            esac
+          done < <(jq -c '.sources.reject.items[]' "${{ inputs.config-dir }}/sources.json" 2>/dev/null || {
+            echo "ERROR: Failed to parse reject sources from ${{ inputs.config-dir }}/sources.json" >&2
+            exit 1
+          })
+        else
+          echo "INFO: No reject sources configured" >&2
+        fi
 
         # Extract reserved rules for domain-list-custom sources in direct/proxy
         declare -A direct_reserve_processed
-        while IFS= read -r line; do
-          name=$(echo "$line" | jq -r '.name')
-          format=$(echo "$line" | jq -r '.format')
+        if jq -e '.sources.direct.items[] | select(.format=="domain-list-custom")' "${{ inputs.config-dir }}/sources.json" >/dev/null 2>&1; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+            name=$(echo "$line" | jq -r '.name // empty')
+            if [[ -z "$name" ]]; then
+              echo "WARNING: Skipping entry with empty name in direct sources reserved" >&2
+              continue
+            fi
+            format=$(echo "$line" | jq -r '.format // empty')
 
-          case "$format" in
-            "domain-list-custom")
-              if [[ -z "${direct_reserve_processed[$name]:-}" ]]; then
-                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "false"
-                direct_reserve_processed["$name"]=1
-              fi
-              ;;
-          esac
-        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
+            case "$format" in
+              "domain-list-custom")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping reserve processing" >&2
+                  continue
+                fi
+                if [[ -z "${direct_reserve_processed[$name]:-}" ]]; then
+                  extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "false" || {
+                    echo "ERROR: Failed to extract domain-list-custom reserved domains for $name" >&2
+                    exit 1
+                  }
+                  direct_reserve_processed["$name"]=1
+                fi
+                ;;
+            esac
+          done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json" 2>/dev/null || {
+            echo "ERROR: Failed to parse direct sources for reserved processing from ${{ inputs.config-dir }}/sources.json" >&2
+            exit 1
+          })
+        fi
 
         declare -A proxy_reserve_processed
-        while IFS= read -r line; do
-          name=$(echo "$line" | jq -r '.name')
-          format=$(echo "$line" | jq -r '.format')
+        if jq -e '.sources.proxy.items[] | select(.format=="domain-list-custom")' "${{ inputs.config-dir }}/sources.json" >/dev/null 2>&1; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+            name=$(echo "$line" | jq -r '.name // empty')
+            if [[ -z "$name" ]]; then
+              echo "WARNING: Skipping entry with empty name in proxy sources reserved" >&2
+              continue
+            fi
+            format=$(echo "$line" | jq -r '.format // empty')
 
-          case "$format" in
-            "domain-list-custom")
-              if [[ -z "${proxy_reserve_processed[$name]:-}" ]]; then
-                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "true"
-                proxy_reserve_processed["$name"]=1
-              fi
-              ;;
-          esac
-        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")
+            case "$format" in
+              "domain-list-custom")
+                if [[ ! -f "temp-$name.txt" ]]; then
+                  echo "WARNING: Input file 'temp-$name.txt' does not exist for $name, skipping reserve processing" >&2
+                  continue
+                fi
+                if [[ -z "${proxy_reserve_processed[$name]:-}" ]]; then
+                  extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "true" || {
+                    echo "ERROR: Failed to extract domain-list-custom reserved domains for $name" >&2
+                    exit 1
+                  }
+                  proxy_reserve_processed["$name"]=1
+                fi
+                ;;
+            esac
+          done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json" 2>/dev/null || {
+            echo "ERROR: Failed to parse proxy sources for reserved processing from ${{ inputs.config-dir }}/sources.json" >&2
+            exit 1
+          })
+        fi
