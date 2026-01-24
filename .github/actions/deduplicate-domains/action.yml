@@ -259,17 +259,20 @@ runs:
           echo "ERROR: Common functions file not found at ${{ github.workspace }}/.github/scripts/common.sh" >&2
           exit 1
         fi
-        source "${{ github.workspace }}/.github/scripts/common.sh"
-        
-        # Validate working directory exists
-        WORK_DIR="${{ inputs.work-dir }}"
-        if [[ ! -d "$WORK_DIR" ]]; then
-          echo "ERROR: Working directory '$WORK_DIR' does not exist" >&2
-          exit 1
-        fi
-        cd "$WORK_DIR"
+         source "${{ github.workspace }}/.github/scripts/common.sh"
+         
+         # Validate working directory exists
+         WORK_DIR="${{ inputs.work-dir }}"
+         if [[ ! -d "$WORK_DIR" ]]; then
+           echo "ERROR: Working directory '$WORK_DIR' does not exist" >&2
+           exit 1
+         fi
+         cd "$WORK_DIR"
+         
+         # Set CUSTOM_DATA_DIR from input parameter
+         CUSTOM_DATA_DIR="${{ inputs.custom-data-dir }}"
 
-         # Finalize domain lists
+          # Finalize domain lists
          mkdir -p "$CUSTOM_DATA_DIR" || {
            echo "ERROR: Failed to create custom data directory" >&2
            exit 1
