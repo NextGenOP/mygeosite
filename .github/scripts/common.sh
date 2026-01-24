@@ -71,15 +71,6 @@ extract_hosts_domains() {
 	grep -E "$pattern" "$input" | awk '{print $2}' >>"$output"
 }
 
-extract_abp_domains() {
-	local input="$1"
-	local output="$2"
-
-	# Filter out comments and metadata lines, keep only domain rules
-	grep -E '^\|\|.*\^$' "$input" | grep -v '^\|\|[0-9]' | perl -ne 'print if not /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/' >>"$output"
-}
-
-
 extract_domain_list_custom() {
 	local input="$1"
 	local output="$2"

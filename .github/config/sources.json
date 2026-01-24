@@ -64,12 +64,6 @@
           "output": "temp-reject.txt"
         },
         {
-          "name": "easylistchina-easylist",
-          "url": "https://easylist-downloads.adblockplus.org/easylistchina+easylist.txt",
-          "format": "abp",
-          "output": "temp-reject.txt"
-        },
-        {
           "name": "peterlowe",
           "url": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
           "format": "hosts",
@@ -77,8 +71,8 @@
         },
         {
           "name": "adguard-dns",
-          "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
-          "format": "abp",
+          "url": "https://v.firebog.net/hosts/AdguardDNS.txt",
+          "format": "plain",
           "output": "temp-reject.txt"
         },
         {
