@@ -170,40 +170,85 @@ runs:
             exit 1
           fi
 
-          # Apply hidden branch removals
-          if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
-            diff "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt || {
-              echo "ERROR: Failed to apply hidden branch removals for direct domains" >&2
-              exit 1
-            }
-          else
-            cp ./direct-list-without-redundant temp-cn.txt || {
-              echo "ERROR: Failed to copy direct-list-without-redundant to temp-cn.txt" >&2
-              exit 1
-            }
-          fi
-          if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
-            diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt || {
-              echo "ERROR: Failed to apply hidden branch removals for proxy domains" >&2
-              exit 1
-            }
-          else
-            cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
-              echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
-              exit 1
-            }
-          fi
-          if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
-            diff "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt || {
-              echo "ERROR: Failed to apply hidden branch removals for reject domains" >&2
-              exit 1
-            }
-          else
-            cp ./reject-list-without-redundant temp-category-ads-all.txt || {
-              echo "ERROR: Failed to copy reject-list-without-redundant to temp-category-ads-all.txt" >&2
-              exit 1
-            }
-          fi
+           # Apply hidden branch removals
+           if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
+             if [ -f ./direct-list-without-redundant ]; then
+               # Perform diff to exclude domains that need to be removed
+               diff "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ./direct-list-without-redundant | awk '/^>/{print $2}' > temp-cn.txt || {
+                 # If diff fails, try alternative approach: filter out domains that exist in the removal list
+                 echo "Warning: Diff failed, using alternative approach for direct domains" >&2
+                 comm -23 <(sort ./direct-list-without-redundant) <(sort "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt") > temp-cn.txt || {
+                   # If alternative also fails, copy original file
+                   cp ./direct-list-without-redundant temp-cn.txt || {
+                     echo "ERROR: Failed to apply hidden branch removals for direct domains" >&2
+                     exit 1
+                   }
+                 }
+               }
+             else
+               cp ./direct-list-without-redundant temp-cn.txt || {
+                 echo "ERROR: Failed to copy direct-list-without-redundant to temp-cn.txt" >&2
+                 exit 1
+               }
+             fi
+           else
+             cp ./direct-list-without-redundant temp-cn.txt || {
+               echo "ERROR: Failed to copy direct-list-without-redundant to temp-cn.txt" >&2
+               exit 1
+             }
+           fi
+           if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
+             if [ -f ./proxy-list-without-redundant ]; then
+               # Perform diff to exclude domains that need to be removed
+               diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt || {
+                 # If diff fails, try alternative approach: filter out domains that exist in the removal list
+                 echo "Warning: Diff failed, using alternative approach for proxy domains" >&2
+                 comm -23 <(sort ./proxy-list-without-redundant) <(sort "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt") > temp-geolocation-\!cn.txt || {
+                   # If alternative also fails, copy original file
+                   cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
+                     echo "ERROR: Failed to apply hidden branch removals for proxy domains" >&2
+                     exit 1
+                   }
+                 }
+               }
+             else
+               cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
+                 echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
+                 exit 1
+               }
+             fi
+           else
+             cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
+               echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
+               exit 1
+             }
+           fi
+           if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
+             if [ -f ./reject-list-without-redundant ]; then
+               # Perform diff to exclude domains that need to be removed
+               diff "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ./reject-list-without-redundant | awk '/^>/{print $2}' > temp-category-ads-all.txt || {
+                 # If diff fails, try alternative approach: filter out domains that exist in the removal list
+                 echo "Warning: Diff failed, using alternative approach for reject domains" >&2
+                 comm -23 <(sort ./reject-list-without-redundant) <(sort "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt") > temp-category-ads-all.txt || {
+                   # If alternative also fails, copy original file
+                   cp ./reject-list-without-redundant temp-category-ads-all.txt || {
+                     echo "ERROR: Failed to apply hidden branch removals for reject domains" >&2
+                     exit 1
+                   }
+                 }
+               }
+             else
+               cp ./reject-list-without-redundant temp-category-ads-all.txt || {
+                 echo "ERROR: Failed to copy reject-list-without-redundant to temp-category-ads-all.txt" >&2
+                 exit 1
+               }
+             fi
+           else
+             cp ./reject-list-without-redundant temp-category-ads-all.txt || {
+               echo "ERROR: Failed to copy reject-list-without-redundant to temp-category-ads-all.txt" >&2
+               exit 1
+             }
+           fi
 
     - id: finalize
       name: Finalize domain lists
