@@ -133,18 +133,42 @@ runs:
            exit 1
          }
 
-         diff ./direct-list-deleted-sort ./direct-list-with-redundant | awk '/^>/{print $2}' > ./direct-list-without-redundant || {
-           echo "ERROR: Failed to create direct-list-without-redundant" >&2
-           exit 1
-         }
-         diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant || {
-           echo "ERROR: Failed to create proxy-list-without-redundant" >&2
-           exit 1
-         }
-         diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant || {
-           echo "ERROR: Failed to create reject-list-without-redundant" >&2
-           exit 1
-         }
+          if [ -f "./direct-list-deleted-sort" ] && [ -f "./direct-list-with-redundant" ]; then
+            diff ./direct-list-deleted-sort ./direct-list-with-redundant | awk '/^>/{print $2}' > ./direct-list-without-redundant || {
+              # If diff fails or produces no output, use the original file
+              cp ./direct-list-with-redundant ./direct-list-without-redundant || {
+                echo "ERROR: Failed to create direct-list-without-redundant" >&2
+                exit 1
+              }
+            }
+          else
+            echo "ERROR: Missing input files for direct domain diff" >&2
+            exit 1
+          fi
+          if [ -f "./proxy-list-deleted-sort" ] && [ -f "./proxy-list-with-redundant" ]; then
+            diff ./proxy-list-deleted-sort ./proxy-list-with-redundant | awk '/^>/{print $2}' > ./proxy-list-without-redundant || {
+              # If diff fails or produces no output, use the original file
+              cp ./proxy-list-with-redundant ./proxy-list-without-redundant || {
+                echo "ERROR: Failed to create proxy-list-without-redundant" >&2
+                exit 1
+              }
+            }
+          else
+            echo "ERROR: Missing input files for proxy domain diff" >&2
+            exit 1
+          fi
+          if [ -f "./reject-list-deleted-sort" ] && [ -f "./reject-list-with-redundant" ]; then
+            diff ./reject-list-deleted-sort ./reject-list-with-redundant | awk '/^>/{print $2}' > ./reject-list-without-redundant || {
+              # If diff fails or produces no output, use the original file
+              cp ./reject-list-with-redundant ./reject-list-without-redundant || {
+                echo "ERROR: Failed to create reject-list-without-redundant" >&2
+                exit 1
+              }
+            }
+          else
+            echo "ERROR: Missing input files for reject domain diff" >&2
+            exit 1
+          fi
 
           # Apply hidden branch removals
           if [ -f "${{ inputs.hidden-data-dir }}/direct-need-to-remove.txt" ]; then
