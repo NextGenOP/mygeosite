@@ -198,6 +198,7 @@ runs:
               ;;
             "wildcard")
               extract_wildcard_domains "temp-$name.txt" "$output"
+              ;;
             *)
               echo "Unknown format '$format' for $name" >&2
               ;;
