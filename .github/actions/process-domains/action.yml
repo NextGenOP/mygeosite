@@ -1,0 +1,158 @@
+name: Process Domains
+description: Process downloaded files and convert them to standardized domain lists
+
+inputs:
+  config-dir:
+    description: Directory containing sources.json config
+    required: false
+    default: ${{ github.workspace }}/.github/config
+  work-dir:
+    description: Working directory for processing
+    required: false
+    default: ${{ github.workspace }}
+  custom-data-dir:
+    description: Path to domain-list-community data directory
+    required: false
+    default: ${{ github.workspace }}/community/data
+
+runs:
+  using: composite
+  steps:
+    - name: Load common functions
+      shell: bash
+      run: |
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh" || true
+
+    - id: process-domains
+      name: Process and extract domains
+      shell: bash
+      run: |
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
+        WORK_DIR="${{ inputs.work-dir }}"
+        cd "$WORK_DIR"
+
+        # Process all direct sources into their respective output files
+        declare -A direct_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
+
+          # Check if we already processed this output file
+          if [[ -z "${direct_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            direct_processed_outputs["$output"]=1
+          fi
+
+          case "$format" in
+            "dnsmasq")
+              extract_dnsmasq_domains "temp-$name.txt" "$output"
+              ;;
+            "domain-list-custom")
+              extract_domain_list_custom "temp-$name.txt" "$output" "false"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        # Process all proxy sources into their respective output files
+        declare -A proxy_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
+
+          # Check if we already processed this output file
+          if [[ -z "${proxy_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            proxy_processed_outputs["$output"]=1
+          fi
+
+          case "$format" in
+            "dnsmasq")
+              extract_dnsmasq_domains "temp-$name.txt" "$output"
+              ;;
+            "domain-list-custom")
+              extract_domain_list_custom "temp-$name.txt" "$output" "true"
+              ;;
+            "plain")
+              extract_plain_domains "temp-$name.txt" "$output"
+              ;;
+            "gfwlist")
+              filter_valid_fqdn "temp-$name.txt" "$output"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        # Process all reject sources into their respective output files
+        declare -A reject_processed_outputs
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+          output=$(echo "$line" | jq -r '.output')
+
+          # Check if we already processed this output file
+          if [[ -z "${reject_processed_outputs[$output]:-}" ]]; then
+            # Clear the output file if it exists
+            > "$output"
+            reject_processed_outputs["$output"]=1
+          fi
+
+          case "$format" in
+            "abp")
+              extract_abp_domains "temp-$name.txt" "$output"
+              ;;
+            "hosts")
+              extract_hosts_domains "temp-$name.txt" "$output"
+              ;;
+            "plain")
+              cp "temp-$name.txt" "$output"
+              ;;
+            "wildcard")
+              extract_wildcard_domains "temp-$name.txt" "$output"
+              ;;
+            *)
+              echo "Unknown format '$format' for $name" >&2
+              ;;
+          esac
+        done < <(jq -c '.sources.reject.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        # Extract reserved rules for domain-list-custom sources in direct/proxy
+        declare -A direct_reserve_processed
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "domain-list-custom")
+              if [[ -z "${direct_reserve_processed[$name]:-}" ]]; then
+                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "false"
+                direct_reserve_processed["$name"]=1
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${{ inputs.config-dir }}/sources.json")
+
+        declare -A proxy_reserve_processed
+        while IFS= read -r line; do
+          name=$(echo "$line" | jq -r '.name')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "domain-list-custom")
+              if [[ -z "${proxy_reserve_processed[$name]:-}" ]]; then
+                extract_domain_list_custom_reserved "temp-$name.txt" "${name}-reserve.txt" "true"
+                proxy_reserve_processed["$name"]=1
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.proxy.items[]' "${{ inputs.config-dir }}/sources.json")

@@ -1,0 +1,137 @@
+name: Download Sources
+description: Download domain list sources from configured URLs
+
+inputs:
+  config-dir:
+    description: Directory containing sources.json config
+    required: false
+    default: ${{ github.workspace }}/.github/config
+  work-dir:
+    description: Working directory for processing
+    required: false
+    default: ${{ github.workspace }}
+  custom-data-dir:
+    description: Path to domain-list-community data directory
+    required: false
+    default: ${{ github.workspace }}/community/data
+
+outputs:
+  download-status:
+    description: Status of download operation
+    value: ${{ steps.download.outputs.status }}
+
+runs:
+  using: composite
+  steps:
+    - name: Load common functions
+      shell: bash
+      run: |
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh" || true
+
+    - id: download
+      name: Download all sources
+      shell: bash
+      run: |
+        # shellcheck source=.github/scripts/common.sh
+        source "${{ github.workspace }}/.github/scripts/common.sh"
+        OUTPUT_DIR="${{ inputs.work-dir }}"
+        CONFIG_DIR="${{ inputs.config-dir }}"
+
+        cd "$OUTPUT_DIR"
+
+        download_status="success"
+
+        # Process direct sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "gfwlist")
+              # Special handling for gfwlist since it requires local setup
+              if [ -d "gfwlist2dnsmasq" ]; then
+                setup_gfwlist "gfwlist2dnsmasq" "$output"
+              else
+                echo "Warning: gfwlist2dnsmasq directory not found for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+            *)
+              if ! curl_download "$url" "temp-$name.txt"; then
+                echo "Failed to download $url for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.direct.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Process proxy sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "gfwlist")
+              # Special handling for gfwlist since it requires local setup
+              if [ -d "gfwlist2dnsmasq" ]; then
+                setup_gfwlist "gfwlist2dnsmasq" "$output"
+              else
+                echo "Warning: gfwlist2dnsmasq directory not found for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+            *)
+              if ! curl_download "$url" "temp-$name.txt"; then
+                echo "Failed to download $url for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.proxy.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Process reject sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+          format=$(echo "$line" | jq -r '.format')
+
+          case "$format" in
+            "gfwlist")
+              # Special handling for gfwlist since it requires local setup
+              if [ -d "gfwlist2dnsmasq" ]; then
+                setup_gfwlist "gfwlist2dnsmasq" "$output"
+              else
+                echo "Warning: gfwlist2dnsmasq directory not found for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+            *)
+              if ! curl_download "$url" "temp-$name.txt"; then
+                echo "Failed to download $url for $name" >&2
+                download_status="partial"
+              fi
+              ;;
+          esac
+        done < <(jq -c '.sources.reject.items[]' "${CONFIG_DIR}/sources.json")
+
+        # Process additional sources
+        while IFS= read -r line; do
+          url=$(echo "$line" | jq -r '.url')
+          name=$(echo "$line" | jq -r '.name')
+          output=$(echo "$line" | jq -r '.output')
+
+          # For additional sources, use curl_download to match behavior with other sources
+          if ! curl_download "$url" "$output"; then
+            echo "Failed to download $url for $name" >&2
+            download_status="partial"
+          fi
+        done < <(jq -c '.sources.additional.items[]' "${CONFIG_DIR}/sources.json")
+
+        echo "status=$download_status" >> "$GITHUB_OUTPUT"
+        echo "Downloads completed with status: $download_status"
