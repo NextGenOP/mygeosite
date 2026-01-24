@@ -257,7 +257,10 @@ runs:
         sort_unique "temp-reject.txt" "reject-list-with-redundant"
 
         # Remove redundant domains
-        chmod +x findRedundantDomain.py
+        if [ -f "${{inputs.hidden-data-dir}}/findRedundantDomain.py" ]; then
+          cp "${{inputs.hidden-data-dir}}/findRedundantDomain.py" .
+          chmod +x findRedundantDomain.py
+        fi
         ./findRedundantDomain.py ./direct-list-with-redundant ./direct-list-deleted-unsort
         ./findRedundantDomain.py ./proxy-list-with-redundant ./proxy-list-deleted-unsort
         ./findRedundantDomain.py ./reject-list-with-redundant ./reject-list-deleted-unsort
