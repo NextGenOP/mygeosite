@@ -161,8 +161,8 @@ runs:
          if [ -f "rule-ads.txt" ]; then
            cp "rule-ads.txt" "${COMMUNITY_DIR}/data/rule-ads"
          fi
-         if [ -f "doh.txt" ]; then
-           cp "doh.txt" "${COMMUNITY_DIR}/data/rule-doh"
+         if [ -f "rule-doh.txt" ]; then
+           cp "rule-doh.txt" "${COMMUNITY_DIR}/data/rule-doh"
          fi
          if [ -f "rule-gaming.txt" ]; then
            cp "rule-gaming.txt" "${COMMUNITY_DIR}/data/rule-gaming"
@@ -221,7 +221,7 @@ runs:
         install_list_files "*-list.txt" "publish"
         install_list_files "*.txt" "publish"
 
-        cd publish
+        pushd publish
         zip rules.zip proxy-list.txt direct-list.txt reject-list.txt geoip.dat geosite.dat
         generate_sha256 "geoip.dat"
         generate_sha256 "geosite.dat"
@@ -229,6 +229,25 @@ runs:
 
         FILE_COUNT=$(ls -1 | wc -l)
         echo "count=$FILE_COUNT" >> "$GITHUB_OUTPUT"
+        popd
+
+    - name: Convert to Sing-Box geoassets
+      shell: bash
+      run: |
+        convert_to_sing_box "geoip"
+        convert_to_sing_box "geosite"
+        pushd publish
+        generate_sha256 "geoip.db"
+        generate_sha256 "geosite.db"
+        popd
+
+    - name: Release and upload assets
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ inputs.github-token }}
+        release_name: ${{ inputs.release-name }}
+        file_glob: true
+        file: ${{ inputs.work-dir }}/publish
 
     - id: git-push
       name: Push to release branch
@@ -249,7 +268,10 @@ runs:
 
         cd "${WORK_DIR}/publish"
         for file in $(ls); do
-          curl -sSL -X PURGE "https://purge.jsdelivr.net/gh/${REPO}@release/${file}" >/dev/null || true
+          echo "Purging file: ${file}"
+          if ! curl -sSL -X PURGE "https://purge.jsdelivr.net/gh/${REPO}@release/${file}"; then
+            echo "Warning: Failed to purge ${file}, continuing..."
+          fi
         done
 
     - name: Summary

@@ -96,7 +96,8 @@ extract_wildcard_domains() {
 	local input="$1"
 	local output="$2"
 
-	grep -v '^\s*#' "$input" | grep -v '^\s*$' | grep -v '^\s*//' | grep -v '^\s*;' | sed 's/^\*\\.//g' >>"$output"
+	# grep -v '^\s*#' "$input" | grep -v '^\s*$' | grep -v '^\s*//' | grep -v '^\s*;' |
+	sed 's/^\*\\.//g' >>"$output"
 }
 
 extract_plain_domains() {
@@ -253,6 +254,17 @@ zip_publish_files() {
 	cd "$dir" || return 1
 	zip rules.zip "${files[@]:1}"
 	cd - >/dev/null
+}
+
+convert_to_sing_box(){
+    local file="$1"
+    local dest_dir="$2"
+    wget https://github.com/malikshi/Notes/releases/download/v2box/v2box && chmod +x v2box
+    if [ -f "$file" ] && [[ "$file" == "geoip" || "$file" == "geosite" ]]; then
+        ./v2box migrate "$file" -i "./publish/$file.dat" -o "$file.db"
+        mv -f "$file.db" ./publish/
+    fi
+
 }
 
 generate_sha256() {

@@ -103,12 +103,6 @@ runs:
           curl_download "$url" "$output"
         done < <(jq -c '.sources.additional.items[]' "${CONFIG_DIR}/sources.json")
 
-        # Preserve original files for special list creation in build phase
-        [ -f "temp-google-china.txt" ] && cp temp-google-china.txt temp-google-china-original.txt 2>/dev/null || true
-        [ -f "temp-apple-china.txt" ] && cp temp-apple-china.txt temp-apple-china-original.txt 2>/dev/null || true
-        [ -f "temp-gfwlist.txt" ] && cp temp-gfwlist.txt temp-gfwlist-original.txt 2>/dev/null || true
-        [ -f "temp-greatfire.txt" ] && cp temp-greatfire.txt temp-greatfire-original.txt 2>/dev/null || true
-
     - id: process-domains
       name: Process and extract domains
       shell: bash
@@ -200,7 +194,7 @@ runs:
               extract_hosts_domains "temp-$name.txt" "$output"
               ;;
             "plain")
-              extract_plain_domains "temp-$name.txt" "$output"
+              cp "temp-$name.txt" "$output"
               ;;
             "wildcard")
               extract_wildcard_domains "temp-$name.txt" "$output"
