@@ -26,7 +26,7 @@
           "name": "gfwlist",
           "url": "https://raw.githubusercontent.com/cokebar/gfwlist2dnsmasq/master/gfwlist2dnsmasq.sh",
           "format": "gfwlist",
-          "output": "temp-proxy.txt"
+          "output": "temp-gfwlist.txt"
         },
         {
           "name": "greatfire-domains",
