@@ -200,28 +200,28 @@ runs:
            if [ -f "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ]; then
              if [ -f ./proxy-list-without-redundant ]; then
                # Perform diff to exclude domains that need to be removed
-               diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > temp-geolocation-\!cn.txt || {
+               diff "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt" ./proxy-list-without-redundant | awk '/^>/{print $2}' > 'temp-geolocation-!cn.txt' || {
                  # If diff fails, try alternative approach: filter out domains that exist in the removal list
                  echo "Warning: Diff failed, using alternative approach for proxy domains" >&2
-                 comm -23 <(sort ./proxy-list-without-redundant) <(sort "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt") > temp-geolocation-\!cn.txt || {
+                 comm -23 <(sort ./proxy-list-without-redundant) <(sort "${{ inputs.hidden-data-dir }}/proxy-need-to-remove.txt") > 'temp-geolocation-!cn.txt' || {
                    # If alternative also fails, copy original file
-                   cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
-                     echo "ERROR: Failed to apply hidden branch removals for proxy domains" >&2
-                     exit 1
-                   }
-                 }
-               }
-             else
-               cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
-                 echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
-                 exit 1
-               }
-             fi
-           else
-             cp ./proxy-list-without-redundant temp-geolocation-\!cn.txt || {
-               echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-\!cn.txt" >&2
-               exit 1
-             }
+                cp ./proxy-list-without-redundant 'temp-geolocation-!cn.txt' || {
+                  echo "ERROR: Failed to apply hidden branch removals for proxy domains" >&2
+                  exit 1
+                }
+              }
+            }
+          else
+            cp ./proxy-list-without-redundant 'temp-geolocation-!cn.txt' || {
+              echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-!cn.txt" >&2
+              exit 1
+            }
+          fi
+        else
+          cp ./proxy-list-without-redundant 'temp-geolocation-!cn.txt' || {
+            echo "ERROR: Failed to copy proxy-list-without-redundant to temp-geolocation-!cn.txt" >&2
+            exit 1
+          }
            fi
            if [ -f "${{ inputs.hidden-data-dir }}/reject-need-to-remove.txt" ]; then
              if [ -f ./reject-list-without-redundant ]; then
@@ -285,11 +285,11 @@ runs:
            echo "ERROR: Failed to filter valid FQDN for direct-tld-list" >&2
            exit 1
          }
-         filter_valid_domains "temp-geolocation-\!cn.txt" "${CUSTOM_DATA_DIR}/geolocation-\!cn" || {
-           echo "ERROR: Failed to filter valid domains for geolocation-\!cn" >&2
+                   filter_valid_domains 'temp-geolocation-!cn.txt' "${CUSTOM_DATA_DIR}/geolocation-!cn" || {
+                       echo "ERROR: Failed to filter valid domains for geolocation-!cn" >&2
            exit 1
          }
-         filter_not_cn_tld "temp-geolocation-\!cn.txt" "proxy-tld-list.txt" || {
+                   filter_not_cn_tld 'temp-geolocation-!cn.txt' "proxy-tld-list.txt" || {
            echo "ERROR: Failed to filter non-CN TLD for proxy-tld-list" >&2
            exit 1
          }
@@ -319,7 +319,7 @@ runs:
          for item in $(jq -c '.sources.proxy.items[] | select(.format == "domain-list-custom") | .name' "${{ inputs.config-dir }}/sources.json" 2>/dev/null); do
            name=$(echo "$item" | tr -d '"')
            if [ -f "${name}-reserve.txt" ]; then
-             cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/geolocation-\!cn" || {
+                           cat "${name}-reserve.txt" >> "${CUSTOM_DATA_DIR}/geolocation-!cn" || {
                echo "ERROR: Failed to add reserved rules for proxy source $name" >&2
                exit 1
              }
@@ -347,8 +347,8 @@ runs:
            echo "ERROR: Failed to copy cn to direct-list.txt" >&2
            exit 1
          }
-         cp "${CUSTOM_DATA_DIR}/geolocation-\!cn" proxy-list.txt || {
-           echo "ERROR: Failed to copy geolocation-\!cn to proxy-list.txt" >&2
+                   cp "${CUSTOM_DATA_DIR}/geolocation-!cn" proxy-list.txt || {
+                       echo "ERROR: Failed to copy geolocation-!cn to proxy-list.txt" >&2
            exit 1
          }
          cp "${CUSTOM_DATA_DIR}/category-ads-all" reject-list.txt || {
